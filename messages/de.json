@@ -1,0 +1,6 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "hello": "Hallo, {name}!",
+  "welcome": "Willkommen zu deiner Vite + Svelte + Tailwind App.",
+  "switch_locale": "Auf Englisch wechseln"
+}
