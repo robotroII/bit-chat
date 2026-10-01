@@ -1,4 +1,5 @@
-import type { EmotionCategory, ToneSubtext } from '../../../emotion'
+import type { AvatarExpression } from '../../avatar-expression'
+import { resolveAvatarExpression } from '../../avatar-expression'
 import type { ReactionViewProps } from '../../types'
 
 /** Mouth variants of the vendored Cartman SVG (exclusive choice per face). */
@@ -37,65 +38,75 @@ export const NEUTRAL_EXPRESSION: CartmanExpression = {
   shake: false,
 }
 
-// Base face per emotion category, before tone/intensity adjustments.
-const BASE: Record<
-  EmotionCategory,
-  Pick<CartmanExpression, 'mouth' | 'eyeLeft' | 'eyeRight' | 'browLeft' | 'browRight'>
-> = {
-  happy: { mouth: 'smile', eyeLeft: 'open', eyeRight: 'open', browLeft: 'rest', browRight: 'rest' },
-  sad: { mouth: 'rest', eyeLeft: 'open', eyeRight: 'open', browLeft: 'down', browRight: 'down' },
-  angry: { mouth: 'nasty', eyeLeft: 'open', eyeRight: 'open', browLeft: 'down', browRight: 'down' },
-  surprised: { mouth: 'open', eyeLeft: 'open', eyeRight: 'open', browLeft: 'up', browRight: 'up' },
-  terrified: { mouth: 'round', eyeLeft: 'open', eyeRight: 'open', browLeft: 'up', browRight: 'up' },
-  curious: { mouth: 'round', eyeLeft: 'open', eyeRight: 'open', browLeft: 'up', browRight: 'rest' },
-  suspicious: { mouth: 'rest', eyeLeft: 'open', eyeRight: 'open', browLeft: 'up', browRight: 'down' },
-  neutral: { mouth: 'rest', eyeLeft: 'open', eyeRight: 'open', browLeft: 'rest', browRight: 'rest' },
-}
+/**
+ * Adapter: unified AvatarExpression weights → discrete Cartman SVG variants.
+ * The emotion→face mapping lives in resolveAvatarExpression; this only
+ * quantizes weights into the artwork's exclusive choices.
+ */
+export function cartmanFromAvatarExpression(
+  ax: AvatarExpression,
+  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting'>,
+): CartmanExpression {
+  const expr: CartmanExpression = { ...NEUTRAL_EXPRESSION }
 
-// Delivery style tweaks layered on top of the base face.
-function applyTone(expr: CartmanExpression, tone: ToneSubtext, emotion: EmotionCategory): void {
-  switch (tone) {
-    case 'sarcastic':
-      // Asymmetric smirk with one raised brow — the classic "yeah, right".
-      expr.mouth = 'smileLeft'
-      expr.browLeft = 'up'
-      expr.browRight = emotion === 'angry' ? 'down' : 'rest'
-      break
-    case 'dramatic':
-      // Theatrical escalation: anything held back opens up, brows shoot up.
-      if (expr.mouth === 'rest') expr.mouth = 'open'
-      expr.browLeft = 'up'
-      expr.browRight = 'up'
-      break
-    case 'casual':
-      // Relaxed delivery: soften theatrical faces back to rest (a frown stays).
-      if (expr.mouth !== 'smile') expr.mouth = 'rest'
-      if (expr.browLeft === 'up') expr.browLeft = 'rest'
-      if (expr.browRight === 'up') expr.browRight = 'rest'
-      break
-    case 'genuine':
-      break
+  // Mouth: strongest signal wins; smirk (asymmetric smile) beats plain smile.
+  // Thresholds sit just above noise: the artwork is binary, and the strength
+  // scaling already communicates intensity through the scale swell.
+  if (ax.smileLeft > 0.3 || ax.smileRight > 0.3) {
+    expr.mouth = ax.smileLeft >= ax.smileRight ? 'smileLeft' : 'smileRight'
+  } else if (ax.smile > 0.08) {
+    expr.mouth = 'smile'
+  } else if (ax.mouthPucker > 0.08) {
+    expr.mouth = 'round'
+  } else if (ax.mouthOpen > 0.08) {
+    expr.mouth = 'open'
+  } else if (ax.angry > 0.25) {
+    expr.mouth = 'nasty'
   }
+
+  // Brows: inner-up (raise) vs down (frown), quantized at 0.35.
+  const browUp = ax.browInnerUp > 0.35
+  const browDown = ax.browDown > 0.35
+  expr.browLeft = browUp ? 'up' : browDown ? 'down' : 'rest'
+  expr.browRight = browUp ? 'up' : browDown ? 'down' : 'rest'
+  // Asymmetric overrides (the weights are bilateral; these read the combos):
+  // smirk → one raised brow, suspicion → up/down, curiosity → up/rest.
+  if (ax.smileLeft > 0.4 && ax.browInnerUp > 0.3) {
+    expr.browLeft = 'up'
+    expr.browRight = 'rest'
+  }
+  if (ax.headTilt < -0.3 && ax.browInnerUp > 0.2 && ax.browDown > 0.2) {
+    expr.browLeft = 'up'
+    expr.browRight = 'down'
+  } else if (ax.headTilt > 0.3 && ax.browInnerUp > 0.2 && ax.browDown <= 0.2) {
+    expr.browLeft = 'up'
+    expr.browRight = 'rest'
+  }
+
+  // Eyes: wide/squint stay open (the artwork has no squint variant); blink
+  // closes both.
+  if (ax.blink > 0.5) {
+    expr.eyeLeft = 'close'
+    expr.eyeRight = 'close'
+  }
+
+  // Head language: tilt weight → degrees (±5° range).
+  expr.headTiltDeg = ax.headTilt * 5
+
+  // High stakes (rage, panic, melodrama) shake the avatar.
+  const { result, reacting } = props
+  expr.shake =
+    !!reacting &&
+    !!result &&
+    result.intensity >= 4 &&
+    (result.emotion === 'angry' || result.emotion === 'terrified' || result.tone === 'dramatic')
+
+  return expr
 }
 
 /** Resolve the Cartman face for the current UI state. */
 export function resolveCartmanExpression(
   props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting'>,
 ): CartmanExpression {
-  const { result, reacting } = props
-  if (!reacting || !result) return NEUTRAL_EXPRESSION
-
-  const expr: CartmanExpression = { ...BASE[result.emotion], headTiltDeg: 0, shake: false }
-  applyTone(expr, result.tone, result.emotion)
-
-  // Head language: curiosity peeks sideways, suspicion leans back.
-  if (result.emotion === 'curious') expr.headTiltDeg = 4
-  else if (result.emotion === 'suspicious') expr.headTiltDeg = -4
-
-  // High stakes (rage, panic, melodrama) shake the avatar.
-  expr.shake =
-    result.intensity >= 4 &&
-    (result.emotion === 'angry' || result.emotion === 'terrified' || result.tone === 'dramatic')
-
-  return expr
+  return cartmanFromAvatarExpression(resolveAvatarExpression(props), props)
 }
