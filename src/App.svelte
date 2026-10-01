@@ -21,10 +21,10 @@
   let debugOpen = $state(false)
   let debugFilter = $state<DebugFilter>('all')
 
-  // Avatar: 😐 when the input is empty, 👀 (minimum curiosity) while there is
+  // Avatar: 😐 when the input is empty, � (minimum curiosity) while there is
   // text, and a reaction emoji held for MIN_HOLD_MS once a result arrives.
   const NEUTRAL_EMOJI = '😐'
-  const LISTENING_EMOJI = '👀'
+  const LISTENING_EMOJI = '🙂'
   const MIN_HOLD_MS = 2500
   const PANIC_INTENSITY = 4
 
