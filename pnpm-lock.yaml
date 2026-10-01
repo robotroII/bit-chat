@@ -7,6 +7,13 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@kugutu/runtime-web':
+        specifier: ^0.2.0
+        version: 0.2.0
+      '@kugutu/schema':
+        specifier: ^0.2.0
+        version: 0.2.0
     devDependencies:
       '@inlang/paraglide-js':
         specifier: ^2.25.4
@@ -152,6 +159,12 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@kugutu/runtime-web@0.2.0':
+    resolution: {integrity: sha512-lUHfb33rpTXbS54cgEtO/fEAyWmhG0No/BLEK6U2bz8OTD+ZIJcUiPAJabwLtgE+sV4K2849LpxVvxZ0kzHEIA==}
+
+  '@kugutu/schema@0.2.0':
+    resolution: {integrity: sha512-poSIbkWqEjd55DFxeifXO/bWQDDB7O0sGjSsvQ92AMJXqYiSmL30pY+o57TD+En9kFfSLkevlnxpiiJQbnJV0w==}
 
   '@lix-js/sdk-darwin-arm64@0.17.0':
     resolution: {integrity: sha512-+r74U7uBNfzgHEkxJAo4VkwQugqfk3MYZ5GHUIZnWZyyU1+oecXTmeepiaMnmHuflMPVv6ZfE4Yl8eM0Wyn+lw==}
@@ -1073,6 +1086,12 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
+
+  '@kugutu/runtime-web@0.2.0':
+    dependencies:
+      '@kugutu/schema': 0.2.0
+
+  '@kugutu/schema@0.2.0': {}
 
   '@lix-js/sdk-darwin-arm64@0.17.0':
     optional: true

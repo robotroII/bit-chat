@@ -17,61 +17,10 @@ export interface ReactionResult {
   emotion: EmotionCategory
   tone: ToneSubtext
   intensity: number // 1-5
-  emoji: string
 }
 
-// 2. Map multidimensional outcomes to specific UTF Emojis
-// Structure: [Category][Tone][Intensity 1-5]
-export const emojiMatrix: Record<EmotionCategory, Record<ToneSubtext, string[]>> = {
-  curious: {
-    genuine: ['🤔', '🧐', '😯', '😮', '😲'],
-    sarcastic: ['🤨', '🙄', '😏', '😒', '🤥'],
-    dramatic: ['😯', '😮', '😳', '😲', '😱'],
-    casual: ['😌', '🤔', '😉', '🫢', '😮'],
-  },
-  suspicious: {
-    genuine: ['😑', '🤨', '😒', '🧐', '😠'],
-    sarcastic: ['😏', '🙃', '😜', '🤭', '🤥'],
-    dramatic: ['😟', '😧', '😰', '😨', '😱'],
-    casual: ['🤔', '🤨', '🫢', '🤫', '😬'],
-  },
-  happy: {
-    genuine: ['�', '😃', '😀', '😁', '😆'],
-    sarcastic: ['🙃', '😏', '😜', '🤪', '🤣'],
-    dramatic: ['😄', '🤩', '🥳', '😍', '🥰'],
-    casual: ['😌', '😉', '😎', '😋', '🤗'],
-  },
-  sad: {
-    genuine: ['🙁', '�', '😢', '😭', '😩'],
-    sarcastic: ['🙃', '🥲', '😅', '🫠', '😭'],
-    dramatic: ['😔', '🥺', '😪', '😭', '😫'],
-    casual: ['😕', '😥', '😓', '😪', '😴'],
-  },
-  angry: {
-    genuine: ['�', '😠', '😤', '😡', '🤬'],
-    sarcastic: ['🙃', '🙄', '😒', '😏', '😤'],
-    dramatic: ['😠', '😤', '😡', '🤬', '🤯'],
-    casual: ['😑', '😒', '😤', '😠', '😡'],
-  },
-  surprised: {
-    genuine: ['😮', '😲', '😳', '�', '🤯'],
-    sarcastic: ['🥱', '🙄', '😏', '😒', '🙃'],
-    dramatic: ['😯', '😲', '😱', '😵', '🤯'],
-    casual: ['😯', '😮', '😲', '🫢', '😳'],
-  },
-  terrified: {
-    genuine: ['�', '😨', '😰', '😱', '😵'],
-    sarcastic: ['😅', '😬', '🥴', '🫠', '😵‍💫'],
-    dramatic: ['😨', '😰', '😱', '🥶', '😵'],
-    casual: ['😬', '😓', '🥶', '😰', '😳'],
-  },
-  neutral: {
-    genuine: ['😐', '�', '😶', '🫥', '🤐'],
-    sarcastic: ['🙄', '😑', '😒', '😏', '🙃'],
-    dramatic: ['😶', '🫥', '🥱', '😴', '🤐'],
-    casual: ['😌', '😴', '🥱', '😪', '😶'],
-  },
-}
+// Emotion→visual mapping lives in the pluggable renderers now
+// (src/lib/reactions/), so analysis stays presentation-agnostic.
 
 const MODEL = '~typesafe/jev-latest'
 const ENDPOINT = 'https://openrouter.ai/api/alpha/decisions'
@@ -170,9 +119,5 @@ export async function evaluateComplexReaction(text: string): Promise<ReactionRes
   const exactScore = results.intensity?.score ?? 1
   const intensity = Math.min(Math.max(Math.round(exactScore), 1), 5)
 
-  // 3. Filter and resolve the perfect UTF Emoji out of our static matrix mapping
-  const emojiBucket = emojiMatrix[emotion][tone]
-  const emoji = emojiBucket[intensity - 1] || '😐'
-
-  return { emotion, tone, intensity, emoji }
+  return { emotion, tone, intensity }
 }

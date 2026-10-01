@@ -1,0 +1,183 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 104 97" fill="none">
+  <!--
+    "Jev" — a Cartman-like reaction rig for Kugutu (@kugutu/runtime-web).
+
+    Body/head shapes adapted from jeeliz/jeelizWeboji demos/svg (Apache-2.0);
+    the character likeness belongs to South Park — demo use only.
+
+    Rig conventions (must match @kugutu/runtime-web):
+    - Slot-bound groups (head_group, eye_left, ...) carry NO transform
+      attribute: the runtime drives them with CSS transforms, which would
+      override any attribute transform. Positioning happens on parent
+      wrapper groups instead.
+    - The mouth is a parts-catalog slot: every variant is baked into the SVG
+      as a data-kugutu-variant group and toggled via setPart("mouth", ...).
+    - Every mouth variant ships a closed/open artwork pair
+      (data-kugutu-mouth-closed / data-kugutu-mouth-open); the runtime
+      crossfades them by the mouth-open amount.
+  -->
+  <style id="kugutu-parts-style">
+    [data-kugutu-variant-slot="mouth"] { display: none; }
+    [data-kugutu-variant-slot="mouth"][data-kugutu-variant-id="mouth-neutral"] { display: inline; }
+    [data-kugutu-variant-slot="mouth"][data-kugutu-variant-id="mouth-smile"] { display: none; }
+    [data-kugutu-variant-slot="mouth"][data-kugutu-variant-id="mouth-grin"] { display: none; }
+    [data-kugutu-variant-slot="mouth"][data-kugutu-variant-id="mouth-open"] { display: none; }
+    [data-kugutu-variant-slot="mouth"][data-kugutu-variant-id="mouth-o"] { display: none; }
+    [data-kugutu-variant-slot="mouth"][data-kugutu-variant-id="mouth-frown"] { display: none; }
+    [data-kugutu-variant-slot="mouth"][data-kugutu-variant-id="mouth-nasty"] { display: none; }
+    [data-kugutu-variant-slot="mouth"][data-kugutu-variant-id="mouth-smirk"] { display: none; }
+  </style>
+
+  <ellipse cx="52" cy="94" rx="34" ry="3.5" fill="#000" opacity="0.12" />
+
+  <!-- TORSO (jacket, pants, feet, gloves — jeeliz shapes) -->
+  <g id="torso_group">
+    <path d="M14,85l3,9h72c0,0,5-9,4-10c-2-2-79,0-79,1" fill="#7C4E32" />
+    <path
+      d="M19,47c0,0-9,7-13,14c-5,6,3,7,3,7l1,14c0,0,10,8,23,8c14,0,26,1,28,0c2-1,9-2,9-4c1-1,27,1,27-9c0-10,7-20-11-29c-17-9-67-1-67-1"
+      fill="#E30000"
+    />
+    <path d="M12,94c0,0,20-4,42,0c0,0,27-4,39,0z" fill="#000" />
+    <path d="M56,78v1M55,69v1M55,87v1" stroke="#000" stroke-linecap="round" />
+    <path d="M56,66l2,12l-2,12" fill="none" stroke="#000" stroke-width="0.5" />
+    <path
+      d="M5,62c3-2,5-2,8,0c3,2,13,6,8,11c-2,2-6,0-8,0c-1,1-4,2-6,1c-4-3-6-8-2-12M99,59c0,0-9-2-11,4l-3,5c0,1-2,3,3,3c5,0,5,2,7,2c3,0,7-1,7-4c0-4-1-11-3-10"
+      fill="#FFF200"
+    />
+  </g>
+
+  <!-- HEAD (skin, hat, pompom — jeeliz shapes) -->
+  <g id="head_group">
+    <path d="M17,32c-3,48,80,43,71-3 l-35-15" fill="#FFE1C4" />
+    <path d="M17,32c9-36,61-32,71-3c-20-9-40-9-71,3" fill="#8ED8F8" />
+    <path
+      d="M41,6c1-1,4-3,8-3c3-0,9-1,14,3l-1,2h-2h-2c0,0-3,1-5,0c-2-1-1-1-1-1l-3,1l-2-1h-1c0,0-1,2-3,2c0,0-2-1-2-3M17,34l0-2c0,0,35-20,71-3v2c0,0-35-17-71,3"
+      fill="#FFF200"
+    />
+
+    <!-- BROWS (single arch per side; expressions move them) -->
+    <g transform="translate(44 27)">
+      <g id="brow_left">
+        <path d="M-7,0.5 Q0,-2.5 7,0" fill="none" stroke="#000" stroke-width="1.4" stroke-linecap="round" />
+      </g>
+    </g>
+    <g transform="translate(60 27)">
+      <g id="brow_right">
+        <path d="M-7,0 Q0,-2.5 7,0.5" fill="none" stroke="#000" stroke-width="1.4" stroke-linecap="round" />
+      </g>
+    </g>
+
+    <!-- EYES (white oval + pupil; blink squashes, look-at shifts) -->
+    <g transform="translate(44 37)">
+      <g id="eye_left">
+        <ellipse cx="0" cy="0" rx="7" ry="9" fill="#FFF" />
+        <circle cx="0" cy="1" r="2.8" fill="#000" />
+      </g>
+    </g>
+    <g transform="translate(60 37)">
+      <g id="eye_right">
+        <ellipse cx="0" cy="0" rx="7" ry="9" fill="#FFF" />
+        <circle cx="0" cy="1" r="2.8" fill="#000" />
+      </g>
+    </g>
+
+    <!-- MOUTH (parts-catalog slot, 8 variants at origin (52,53)) -->
+    <g transform="translate(52 53)">
+      <g id="mouth_group">
+        <g data-kugutu-variant-slot="mouth" data-kugutu-variant-id="mouth-neutral">
+          <g data-kugutu-mouth-open>
+            <path d="M-8,0 Q0,2.5 8,0 Q9,5.5 0,6.5 Q-9,5.5 -8,0 Z" fill="#7A2E3A" />
+            <path d="M-4.5,4.5 Q0,6.5 4.5,4.5 Q0,3 -4.5,4.5 Z" fill="#FF8E8E" />
+          </g>
+          <g data-kugutu-mouth-closed>
+            <path d="M-8,0 Q0,2.5 8,0" fill="none" stroke="#000" stroke-width="0.9" stroke-linecap="round" />
+          </g>
+        </g>
+        <g data-kugutu-variant-slot="mouth" data-kugutu-variant-id="mouth-smile">
+          <g data-kugutu-mouth-open>
+            <path d="M-10,-2 Q0,5 10,-2 Q11,6.5 0,8.5 Q-11,6.5 -10,-2 Z" fill="#7A2E3A" />
+            <path d="M-5,-0.5 l3,0 l0,2 l-1.5,0 z" fill="#fff" />
+            <path d="M-1.5,-0.5 l3,0 l0,2 l-3,0 z" fill="#fff" />
+            <path d="M2,-0.5 l3,0 l0,2 l-3,0 z" fill="#fff" />
+            <path d="M5.5,-0.5 l3,0 l-1.5,2 l-1.5,0 z" fill="#fff" />
+            <path d="M-5,6 Q0,8 5,6 Q0,4.5 -5,6 Z" fill="#FF8E8E" />
+          </g>
+          <g data-kugutu-mouth-closed>
+            <path d="M-10,-2 Q0,5 10,-2" fill="none" stroke="#000" stroke-width="0.9" stroke-linecap="round" />
+          </g>
+        </g>
+        <g data-kugutu-variant-slot="mouth" data-kugutu-variant-id="mouth-grin">
+          <g data-kugutu-mouth-open>
+            <path d="M-11,-2 Q0,5.5 11,-2 Q13,8.5 0,10.5 Q-13,8.5 -11,-2 Z" fill="#7A2E3A" />
+            <path d="M-7,-1 l3,0 l0,2.2 l-1.5,0 z" fill="#fff" />
+            <path d="M-3.5,-1 l3,0 l0,2.2 l-3,0 z" fill="#fff" />
+            <path d="M0,-1 l3,0 l0,2.2 l-3,0 z" fill="#fff" />
+            <path d="M3.5,-1 l3,0 l0,2.2 l-3,0 z" fill="#fff" />
+            <path d="M7,-1 l3,0 l-1.5,2.2 l-1.5,0 z" fill="#fff" />
+            <path d="M-5.5,7.5 Q0,9.5 5.5,7.5 Q0,6 -5.5,7.5 Z" fill="#FF8E8E" />
+          </g>
+          <g data-kugutu-mouth-closed>
+            <path d="M-11,-2 Q0,5.5 11,-2" fill="none" stroke="#000" stroke-width="0.9" stroke-linecap="round" />
+          </g>
+        </g>
+        <g data-kugutu-variant-slot="mouth" data-kugutu-variant-id="mouth-open">
+          <g data-kugutu-mouth-open>
+            <path d="M-7,-0.5 Q0,0.5 7,-0.5 Q9,6.5 0,8.5 Q-9,6.5 -7,-0.5 Z" fill="#7A2E3A" />
+            <path d="M-4,0 l2.5,0 l0,1.6 l-2.5,0 z" fill="#fff" />
+            <path d="M-1,0 l2.5,0 l0,1.6 l-2.5,0 z" fill="#fff" />
+            <path d="M2,0 l2.5,0 l0,1.6 l-2.5,0 z" fill="#fff" />
+            <path d="M-4,6 Q0,7.8 4,6 Q0,4.6 -4,6 Z" fill="#FF8E8E" />
+          </g>
+          <g data-kugutu-mouth-closed>
+            <path d="M-7,-0.5 Q0,0.5 7,-0.5" fill="none" stroke="#000" stroke-width="0.9" stroke-linecap="round" />
+          </g>
+        </g>
+        <g data-kugutu-variant-slot="mouth" data-kugutu-variant-id="mouth-o">
+          <g data-kugutu-mouth-open>
+            <ellipse cx="0" cy="1.5" rx="4" ry="5.5" fill="#7A2E3A" />
+            <ellipse cx="0" cy="3.5" rx="2" ry="1.8" fill="#FF8E8E" />
+            <ellipse cx="0" cy="1.5" rx="4" ry="5.5" fill="none" stroke="#000" stroke-width="0.7" />
+          </g>
+          <g data-kugutu-mouth-closed>
+            <ellipse cx="0" cy="1.5" rx="3.2" ry="4" fill="none" stroke="#000" stroke-width="0.9" />
+          </g>
+        </g>
+        <g data-kugutu-variant-slot="mouth" data-kugutu-variant-id="mouth-frown">
+          <g data-kugutu-mouth-open>
+            <path d="M-8,2 Q0,-2.5 8,2 Q9,6 0,7.5 Q-9,6 -8,2 Z" fill="#7A2E3A" />
+            <path d="M-4,5.5 Q0,7.2 4,5.5 Q0,4.2 -4,5.5 Z" fill="#FF8E8E" />
+          </g>
+          <g data-kugutu-mouth-closed>
+            <path d="M-8,2 Q0,-2.5 8,2" fill="none" stroke="#000" stroke-width="0.9" stroke-linecap="round" />
+          </g>
+        </g>
+        <g data-kugutu-variant-slot="mouth" data-kugutu-variant-id="mouth-nasty">
+          <g data-kugutu-mouth-open>
+            <path
+              d="M-7,0 c0,9 1.7,4 10.5,4.1 c8.8,0.2 9.8,4.5 9.9,-4.8 c0.1,-9.2 -5.5,-1.1 -10.5,-1.1 c-5,0 -9.9,-7.2 -9.9,1.8 z"
+              fill="#7A2E3A"
+            />
+            <path d="M-3,1.5 l2.5,0 l0,1.6 l-2.5,0 z" fill="#fff" />
+            <path d="M0.5,1.8 l2.5,0 l0,1.6 l-2.5,0 z" fill="#fff" />
+          </g>
+          <g data-kugutu-mouth-closed>
+            <path d="M-7,1 Q2,3.5 10,-1.5" fill="none" stroke="#000" stroke-width="0.9" stroke-linecap="round" />
+          </g>
+        </g>
+        <g data-kugutu-variant-slot="mouth" data-kugutu-variant-id="mouth-smirk">
+          <g data-kugutu-mouth-open>
+            <path d="M-8,1.5 Q1,4 10,-3 Q11,3 4,5 Q-4,6.5 -8,1.5 Z" fill="#7A2E3A" />
+            <path d="M-4,4.5 Q0,6 3,4.8 Q0,3.4 -4,4.5 Z" fill="#FF8E8E" />
+          </g>
+          <g data-kugutu-mouth-closed>
+            <path d="M-8,1.5 Q1,4 10,-3" fill="none" stroke="#000" stroke-width="0.9" stroke-linecap="round" />
+          </g>
+        </g>
+      </g>
+    </g>
+
+    <!-- CHIN + DOUBLE CHIN (jeeliz shapes) -->
+    <path d="M50,59c0,0,4,3,10,0" fill="none" stroke="#000" stroke-width="0.5" />
+    <path d="M25,50c0,0,10,12,23,12c13,0,24,0,35-15" fill="none" stroke="#000" stroke-width="0.5" />
+  </g>
+</svg>

@@ -1,0 +1,234 @@
+{
+  "bundleVersion": "0.1.0",
+  "sourceSchemaVersion": "0.1.0",
+  "character": {
+    "id": "jev-cartman",
+    "template": "avatar-lite"
+  },
+  "assets": [
+    {
+      "id": "primary-svg",
+      "type": "svg",
+      "path": "./jev.svg"
+    }
+  ],
+  "bindings": {
+    "slots": {
+      "head": "transform.head_group",
+      "eye.l": "transform.eye_left",
+      "eye.r": "transform.eye_right",
+      "brow.l": "transform.brow_left",
+      "brow.r": "transform.brow_right",
+      "mouth": "transform.mouth_group",
+      "torso": "transform.torso_group"
+    }
+  },
+  "behaviors": [
+    {
+      "id": "blink-default",
+      "type": "blink",
+      "channels": ["transform.eye_left.scaleY", "transform.eye_right.scaleY"],
+      "params": {
+        "closeMs": 110,
+        "openMs": 130,
+        "minIntervalMs": 2600,
+        "maxIntervalMs": 4800
+      }
+    },
+    {
+      "id": "look-at-default",
+      "type": "look-at",
+      "channels": [
+        "transform.eye_left.translate",
+        "transform.eye_right.translate",
+        "transform.head_group.rotate"
+      ],
+      "params": {
+        "radiusX": 0.08,
+        "radiusY": 0.06,
+        "headFollow": 0.25,
+        "smoothing": 0.2
+      }
+    },
+    {
+      "id": "mouth-open-default",
+      "type": "mouth-open",
+      "channels": ["transform.mouth_group.scaleY"],
+      "params": {
+        "maxOpen": 0.9,
+        "smoothing": 0.25
+      }
+    }
+  ],
+  "expressions": [
+    {
+      "id": "happy",
+      "poses": [
+        { "slot": "brow.l", "translateY": -1.5 },
+        { "slot": "brow.r", "translateY": -1.5 },
+        { "slot": "eye.l", "scaleY": -0.35, "translateY": 0.5 },
+        { "slot": "eye.r", "scaleY": -0.35, "translateY": 0.5 },
+        { "slot": "head", "translateY": 0.5 }
+      ]
+    },
+    {
+      "id": "sad",
+      "poses": [
+        { "slot": "brow.l", "rotate": -12, "translateY": 1.5 },
+        { "slot": "brow.r", "rotate": 12, "translateY": 1.5 },
+        { "slot": "eye.l", "scaleY": -0.15, "translateY": 1 },
+        { "slot": "eye.r", "scaleY": -0.15, "translateY": 1 },
+        { "slot": "head", "rotate": 3, "translateY": 2 }
+      ]
+    },
+    {
+      "id": "angry",
+      "poses": [
+        { "slot": "brow.l", "rotate": 15, "translateY": 3 },
+        { "slot": "brow.r", "rotate": -15, "translateY": 3 },
+        { "slot": "eye.l", "scaleY": -0.15 },
+        { "slot": "eye.r", "scaleY": -0.15 },
+        { "slot": "head", "translateY": 1.5 }
+      ]
+    },
+    {
+      "id": "surprised",
+      "poses": [
+        { "slot": "brow.l", "translateY": -4.5 },
+        { "slot": "brow.r", "translateY": -4.5 },
+        { "slot": "eye.l", "scaleY": 0.25, "scaleX": 0.1 },
+        { "slot": "eye.r", "scaleY": 0.25, "scaleX": 0.1 },
+        { "slot": "head", "translateY": -1.5 }
+      ]
+    },
+    {
+      "id": "terrified",
+      "poses": [
+        { "slot": "brow.l", "translateY": -5, "rotate": -8 },
+        { "slot": "brow.r", "translateY": -5, "rotate": 8 },
+        { "slot": "eye.l", "scaleY": 0.3 },
+        { "slot": "eye.r", "scaleY": 0.3 },
+        { "slot": "head", "translateY": -2, "rotate": 2 }
+      ]
+    },
+    {
+      "id": "curious",
+      "poses": [
+        { "slot": "brow.l", "translateY": -4 },
+        { "slot": "brow.r", "translateY": 0.5 },
+        { "slot": "head", "rotate": 5 }
+      ]
+    },
+    {
+      "id": "suspicious",
+      "poses": [
+        { "slot": "brow.l", "translateY": -3 },
+        { "slot": "brow.r", "translateY": 2, "rotate": -10 },
+        { "slot": "eye.l", "scaleY": -0.1 },
+        { "slot": "head", "rotate": -4 }
+      ]
+    },
+    {
+      "id": "neutral",
+      "poses": [{ "slot": "head", "translateY": 0 }]
+    }
+  ],
+  "gestures": [
+    {
+      "id": "nod",
+      "durationMs": 620,
+      "tracks": [
+        {
+          "slot": "head",
+          "keyframes": [
+            { "t": 0, "translateY": 0 },
+            { "t": 0.4, "translateY": 5 },
+            { "t": 1, "translateY": 0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shake",
+      "durationMs": 640,
+      "tracks": [
+        {
+          "slot": "head",
+          "keyframes": [
+            { "t": 0, "rotate": 0 },
+            { "t": 0.25, "rotate": -6 },
+            { "t": 0.5, "rotate": 6 },
+            { "t": 0.75, "rotate": -4 },
+            { "t": 1, "rotate": 0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bounce",
+      "durationMs": 560,
+      "tracks": [
+        {
+          "slot": "torso",
+          "keyframes": [
+            { "t": 0, "translateY": 0 },
+            { "t": 0.45, "translateY": -6 },
+            { "t": 1, "translateY": 0 }
+          ]
+        },
+        {
+          "slot": "head",
+          "keyframes": [
+            { "t": 0, "translateY": 0 },
+            { "t": 0.45, "translateY": -6 },
+            { "t": 1, "translateY": 0 }
+          ]
+        }
+      ]
+    }
+  ],
+  "visemes": {
+    "sil": { "open": 0, "width": 1 },
+    "PP": { "open": 0, "width": 0.95 },
+    "FF": { "open": 0.15, "width": 1 },
+    "TH": { "open": 0.25, "width": 1 },
+    "DD": { "open": 0.3, "width": 1 },
+    "kk": { "open": 0.3, "width": 1 },
+    "CH": { "open": 0.25, "width": 0.9 },
+    "SS": { "open": 0.15, "width": 1.05 },
+    "nn": { "open": 0.2, "width": 1 },
+    "RR": { "open": 0.3, "width": 0.9 },
+    "aa": { "open": 0.9, "width": 1.1 },
+    "E": { "open": 0.5, "width": 1.15 },
+    "I": { "open": 0.35, "width": 1.1 },
+    "O": { "open": 0.6, "width": 0.8 },
+    "U": { "open": 0.4, "width": 0.7 }
+  },
+  "runtime": {
+    "api": [
+      "lookAt",
+      "playBehavior",
+      "playGesture",
+      "setEmotion",
+      "setMouthOpen",
+      "setPart",
+      "setVariant",
+      "speak"
+    ]
+  },
+  "parts": {
+    "catalog": {
+      "mouth-neutral": { "id": "mouth-neutral", "slot": "mouth", "asset": "./mouths/neutral.svg", "displayName": "Neutral" },
+      "mouth-smile": { "id": "mouth-smile", "slot": "mouth", "asset": "./mouths/smile.svg", "displayName": "Smile" },
+      "mouth-grin": { "id": "mouth-grin", "slot": "mouth", "asset": "./mouths/grin.svg", "displayName": "Grin" },
+      "mouth-open": { "id": "mouth-open", "slot": "mouth", "asset": "./mouths/open.svg", "displayName": "Open" },
+      "mouth-o": { "id": "mouth-o", "slot": "mouth", "asset": "./mouths/o.svg", "displayName": "Small o" },
+      "mouth-frown": { "id": "mouth-frown", "slot": "mouth", "asset": "./mouths/frown.svg", "displayName": "Frown" },
+      "mouth-nasty": { "id": "mouth-nasty", "slot": "mouth", "asset": "./mouths/nasty.svg", "displayName": "Nasty" },
+      "mouth-smirk": { "id": "mouth-smirk", "slot": "mouth", "asset": "./mouths/smirk.svg", "displayName": "Smirk" }
+    },
+    "selections": {
+      "mouth": { "partId": "mouth-neutral" }
+    }
+  }
+}

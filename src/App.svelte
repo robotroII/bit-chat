@@ -6,6 +6,7 @@
     type ReactionResult,
   } from './lib/emotion'
   import { debugLog, type DebugEntry } from './lib/debug.svelte'
+  import { rendererRegistry } from './lib/reactions/registry.svelte'
 
   let locale = $state(getLocale())
 
@@ -14,6 +15,16 @@
   let result = $state<ReactionResult | null>(null)
   let error = $state('')
 
+  // True while the user is typing — renderers show their "listening" face.
+  const listening = $derived(text.trim().length > 0)
+
+  // Idle bobbing preference (opt-in), persisted across reloads.
+  const BOBBING_STORAGE_KEY = 'jev:bobbing'
+  let bobbing = $state(localStorage.getItem(BOBBING_STORAGE_KEY) === 'true')
+  $effect(() => {
+    localStorage.setItem(BOBBING_STORAGE_KEY, String(bobbing))
+  })
+
   // Debug console state: collapsed by default, expands over the lower half of
   // the viewport. It overlays the main area, so expanding it never shifts layout.
   const DEBUG_FILTERS = ['all', 'pending', 'error'] as const
@@ -21,15 +32,12 @@
   let debugOpen = $state(false)
   let debugFilter = $state<DebugFilter>('all')
 
-  // Avatar: 😐 when the input is empty, � (minimum curiosity) while there is
-  // text, and a reaction emoji held for 2.5s (intensity 1) to 6s (intensity 5).
-  const NEUTRAL_EMOJI = '😐'
-  const LISTENING_EMOJI = '🙂'
+  // A reaction is held on screen for 2.5s (intensity 1) to 6s (intensity 5).
+  // The idle/listening faces are chosen by each renderer (src/lib/reactions/).
   const MIN_HOLD_MS = 2500
   const MAX_HOLD_MS = 6000
   const PANIC_INTENSITY = 4
 
-  let displayEmoji = $state(NEUTRAL_EMOJI)
   let reacting = $state(false)
   // Non-reactive on purpose: reading these inside the debounce $effect would re-trigger it.
   let held: ReactionResult | null = null
@@ -40,13 +48,10 @@
   // A request is in flight; a newer analyze was requested and will re-run after.
   let pendingRerun = false
 
-  const idleEmoji = () => (text.trim() ? LISTENING_EMOJI : NEUTRAL_EMOJI)
-
   function showReaction(res: ReactionResult) {
     held = res
     queued = null
     result = res
-    displayEmoji = res.emoji
     reacting = true
     clearTimeout(holdTimer)
     holdTimer = setTimeout(releaseHold, MIN_HOLD_MS + ((res.intensity - 1) / 4) * (MAX_HOLD_MS - MIN_HOLD_MS))
@@ -60,7 +65,6 @@
     }
     held = null
     reacting = false
-    displayEmoji = idleEmoji()
   }
 
   // Only a clearly stronger reaction may cut a hold short; anything else waits its turn.
@@ -93,7 +97,6 @@
       queued = null
       lastAnalyzed = ''
     }
-    if (!held) displayEmoji = value ? LISTENING_EMOJI : NEUTRAL_EMOJI
     if (!value || value === lastAnalyzed) return
     debounceTimer = setTimeout(() => {
       debounceTimer = undefined
@@ -220,13 +223,14 @@
 
         <div class="mt-5 space-y-4">
           <div class="flex flex-col items-center gap-3">
-            <span
-              class="text-6xl leading-none transition-transform duration-500 {reacting ? 'scale-110' : 'scale-100'}"
-              role="img"
-              aria-label={result ? '{result.emotion} {result.tone}' : 'neutral'}
-            >
-              {displayEmoji}
-            </span>
+            <!-- The single active renderer, picked via the dropdown below.
+                 Keyed each = remount on switch (clean player lifecycle). -->
+            <div class="flex min-h-40 flex-wrap items-center justify-center gap-6">
+              {#each [rendererRegistry.active] as r (r.id)}
+                {@const Active = r.component}
+                <Active {result} {listening} {reacting} {bobbing} />
+              {/each}
+            </div>
             {#if result}
               <div class="flex flex-wrap items-center justify-center gap-2">
                 <span class="rounded-full bg-indigo-600/20 px-4 py-1.5 text-sm font-semibold text-indigo-300 capitalize">
@@ -254,6 +258,29 @@
               </div>
             </div>
           {/if}
+
+          <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-gray-400">
+            <label class="flex items-center gap-2">
+              <span>{m.emotion_renderer()}</span>
+              <select
+                class="rounded-lg border border-gray-700 bg-gray-950 px-2 py-1 text-gray-200 outline-none transition focus:border-indigo-500"
+                value={rendererRegistry.selectedId}
+                onchange={(e) => rendererRegistry.select(e.currentTarget.value)}
+              >
+                {#each rendererRegistry.selectable as r (r.id)}
+                  <option value={r.id}>{r.label}</option>
+                {/each}
+              </select>
+            </label>
+            <label class="flex items-center gap-2">
+              <input type="checkbox" bind:checked={rendererRegistry.emojiDevMode} class="size-4 accent-indigo-500" />
+              {m.emotion_dev_emoji()}
+            </label>
+            <label class="flex items-center gap-2">
+              <input type="checkbox" bind:checked={bobbing} class="size-4 accent-indigo-500" />
+              {m.emotion_bobbing()}
+            </label>
+          </div>
         </div>
       </section>
 
