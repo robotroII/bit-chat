@@ -1,13 +1,19 @@
 import { cartmanRenderer } from './renderers/cartman'
 import { emojiRenderer } from './renderers/emoji'
 import { kugutuRenderer } from './renderers/kugutu'
+import { vrmRenderer } from './renderers/vrm'
 import type { ReactionRenderer } from './types'
 
 /**
- * Register new avatar integrations here (voqalize, …): create
+ * Register new avatar integrations here: create
  * `renderers/<id>/` exporting a ReactionRenderer, then add it to this list.
  */
-const ALL_RENDERERS: readonly ReactionRenderer[] = [emojiRenderer, cartmanRenderer, kugutuRenderer]
+const ALL_RENDERERS: readonly ReactionRenderer[] = [
+  emojiRenderer,
+  cartmanRenderer,
+  kugutuRenderer,
+  vrmRenderer,
+]
 
 const SELECTED_STORAGE_KEY = 'jev:renderer'
 const DEFAULT_RENDERER_ID = 'cartman'
