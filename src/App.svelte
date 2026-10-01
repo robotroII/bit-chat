@@ -22,10 +22,11 @@
   let debugFilter = $state<DebugFilter>('all')
 
   // Avatar: 😐 when the input is empty, � (minimum curiosity) while there is
-  // text, and a reaction emoji held for MIN_HOLD_MS once a result arrives.
+  // text, and a reaction emoji held for 2.5s (intensity 1) to 6s (intensity 5).
   const NEUTRAL_EMOJI = '😐'
   const LISTENING_EMOJI = '🙂'
   const MIN_HOLD_MS = 2500
+  const MAX_HOLD_MS = 6000
   const PANIC_INTENSITY = 4
 
   let displayEmoji = $state(NEUTRAL_EMOJI)
@@ -48,7 +49,7 @@
     displayEmoji = res.emoji
     reacting = true
     clearTimeout(holdTimer)
-    holdTimer = setTimeout(releaseHold, MIN_HOLD_MS)
+    holdTimer = setTimeout(releaseHold, MIN_HOLD_MS + ((res.intensity - 1) / 4) * (MAX_HOLD_MS - MIN_HOLD_MS))
   }
 
   function releaseHold() {
