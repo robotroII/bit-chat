@@ -8,6 +8,7 @@
   import { sendChatMessage, type ChatMessage } from './lib/chat'
   import { debugLog, type DebugEntry } from './lib/debug.svelte'
   import { rendererRegistry } from './lib/reactions/registry.svelte'
+  import { apiKeySettings } from './lib/api-key.svelte'
   import { voice } from './lib/voice.svelte'
 
   let locale = $state(getLocale())
@@ -542,6 +543,23 @@
             <label class="flex items-center gap-2">
               <input type="checkbox" bind:checked={bobbing} class="size-4 accent-indigo-500" />
               {m.emotion_bobbing()}
+            </label>
+            <!-- Runtime API key override: wins over VITE_OPENROUTER_KEY from
+                 .env without a rebuild. Persisted in localStorage. -->
+            <label class="flex items-center gap-2">
+              <span class="whitespace-nowrap">{m.api_key()}</span>
+              <input
+                type="password"
+                class="w-44 rounded-lg border border-gray-700 bg-gray-950 px-2 py-1 font-mono text-xs text-gray-200 placeholder-gray-600 outline-none transition focus:border-indigo-500"
+                bind:value={apiKeySettings.override}
+                oninput={() => apiKeySettings.set(apiKeySettings.override)}
+                placeholder="sk-or-… (.env)"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              {#if apiKeySettings.isOverridden}
+                <span class="size-2 shrink-0 rounded-full bg-emerald-500" title="Override active"></span>
+              {/if}
             </label>
             {#if voice.ttsSupported}
               <label class="flex items-center gap-2">

@@ -1,4 +1,5 @@
 import { loggedFetch } from './debug.svelte'
+import { effectiveApiKey } from './api-key.svelte'
 
 // Chat layer: a "larger" LLM that the user can talk to. Its reply is printed
 // in the transcript AND fed back into the emotion pipeline (src/lib/emotion.ts),
@@ -32,7 +33,7 @@ interface ChatCompletionResponse {
 }
 
 export async function sendChatMessage(history: ChatMessage[]): Promise<string> {
-  const apiKey = import.meta.env.VITE_OPENROUTER_KEY
+  const apiKey = effectiveApiKey()
   if (!apiKey) {
     throw new Error('MISSING_KEY')
   }

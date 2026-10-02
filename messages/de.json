@@ -13,6 +13,7 @@
   "emotion_bobbing": "Wackel-Animation",
   "emotion_renderer": "Avatar",
   "emotion_dev_emoji": "Emoji-Vorschau (Dev)",
+  "api_key": "OpenRouter-Schlüssel",
   "emotion_confidence": "Konfidenz",
   "emotion_raw": "Rohausgabe des Modells",
   "chat_send": "Senden",
