@@ -52,7 +52,11 @@ export function cartmanFromAvatarExpression(
   // Mouth: strongest signal wins; smirk (asymmetric smile) beats plain smile.
   // Thresholds sit just above noise: the artwork is binary, and the strength
   // scaling already communicates intensity through the scale swell.
-  if (ax.smileLeft > 0.3 || ax.smileRight > 0.3) {
+  // While Jev is speaking, articulation wins: the talking mouth flaps with
+  // the voice envelope instead of freezing in an expression variant.
+  if (props.speaking && ax.mouthOpen > 0.08) {
+    expr.mouth = 'open'
+  } else if (ax.smileLeft > 0.3 || ax.smileRight > 0.3) {
     expr.mouth = ax.smileLeft >= ax.smileRight ? 'smileLeft' : 'smileRight'
   } else if (ax.smile > 0.08) {
     expr.mouth = 'smile'

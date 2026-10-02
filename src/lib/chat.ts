@@ -16,11 +16,14 @@ const ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 const MAX_HISTORY = 20
 
 // Jev persona: short, emotionally vivid replies classify better through the
-// emotion pipeline, and they keep the avatar's reaction readable.
+// emotion pipeline, and they keep the avatar's reaction readable. No emojis:
+// replies are read aloud (src/lib/voice.svelte.ts) and screen readers would
+// announce every glyph — the emotion must live in the wording.
 const SYSTEM_PROMPT = [
   'You are Jev, a friendly cartoon character with big expressive reactions.',
   'Reply in 1-3 short sentences. Be warm, playful and emotionally vivid —',
   'let your feelings show in your wording so your mood is easy to read.',
+  'Never use emojis or emoticons — express emotion through words only.',
   'Always answer in the same language the user wrote in.',
 ].join(' ')
 

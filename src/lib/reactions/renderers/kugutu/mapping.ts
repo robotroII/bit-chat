@@ -55,8 +55,11 @@ export function kugutuFromAvatarExpression(
   const intensity = Math.max(emotionalPeak(ax), emotionWeight)
 
   // Mouth artwork from the mouth weights (part ids baked into jev.svg).
+  // While Jev is speaking, articulation wins: the talking mouth flaps with
+  // the voice envelope instead of freezing in an expression variant.
   let mouth = 'mouth-neutral'
-  if (ax.smileLeft > 0.3 || ax.smileRight > 0.3) mouth = 'mouth-smirk'
+  if (props.speaking && ax.mouthOpen > 0.05) mouth = 'mouth-open'
+  else if (ax.smileLeft > 0.3 || ax.smileRight > 0.3) mouth = 'mouth-smirk'
   else if (ax.smile > 0.7) mouth = 'mouth-grin'
   else if (ax.smile > 0.1) mouth = 'mouth-smile'
   else if (ax.mouthPucker > 0.12) mouth = 'mouth-o'

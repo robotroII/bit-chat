@@ -114,17 +114,28 @@ export function resolveAvatarExpression(
 ): AvatarExpression {
   const { result, listening, reacting, speaking, voiceMouthOpen } = props
   if (!reacting || !result) {
-    // Idle/listening: a thinking glance up-left while the user types — but
-    // not while Jev himself is speaking (he faces the user).
+    // Idle/listening: an attentive "I'm listening" pose — brows clearly
+    // raised, head tilted (the classic "hmm?"), thinking glance up-left —
+    // but not while Jev himself is speaking (he faces the user). Brows/tilt
+    // make the state visible even on renderers without gaze channels
+    // (Cartman); on Kugutu the signature resolves to the curious face.
     if (speaking) {
-      return applyVoiceMouth(NEUTRAL_AVATAR_EXPRESSION, voiceMouthOpen)
+      return applyVoiceMotion(NEUTRAL_AVATAR_EXPRESSION, voiceMouthOpen, speaking)
     }
     return listening
-      ? applyVoiceMouth(
-          { ...NEUTRAL_AVATAR_EXPRESSION, relaxed: 0.3, gazeX: -0.35, gazeY: -0.3 },
+      ? applyVoiceMotion(
+          {
+            ...NEUTRAL_AVATAR_EXPRESSION,
+            relaxed: 0.3,
+            browInnerUp: 0.8,
+            headTilt: 0.6,
+            gazeX: -0.35,
+            gazeY: -0.3,
+          },
           voiceMouthOpen,
+          speaking,
         )
-      : applyVoiceMouth(NEUTRAL_AVATAR_EXPRESSION, voiceMouthOpen)
+      : applyVoiceMotion(NEUTRAL_AVATAR_EXPRESSION, voiceMouthOpen, speaking)
   }
 
   const { emotion, tone, intensity: level } = result
@@ -157,13 +168,23 @@ export function resolveAvatarExpression(
       break
   }
 
-  return applyVoiceMouth(ax, voiceMouthOpen)
+  return applyVoiceMotion(ax, voiceMouthOpen, speaking)
 }
 
-/** The voice layer only ever opens the mouth — it never overrides an emotion. */
-function applyVoiceMouth(ax: AvatarExpression, voiceMouthOpen: number): AvatarExpression {
-  if (voiceMouthOpen > 0) {
+/**
+ * Voice-layer motion, applied on top of any emotion (never overrides one):
+ * the mouth flaps with the speech envelope, and the brows ride along so the
+ * face feels alive while talking — continuous on VRM, peak-triggered
+ * (brows pop up at word pulses) on discrete artwork like Cartman.
+ */
+function applyVoiceMotion(
+  ax: AvatarExpression,
+  voiceMouthOpen: number,
+  speaking: boolean,
+): AvatarExpression {
+  if (speaking && voiceMouthOpen > 0) {
     ax.mouthOpen = Math.max(ax.mouthOpen, voiceMouthOpen)
+    ax.browInnerUp = Math.max(ax.browInnerUp, voiceMouthOpen * 0.6)
   }
   return ax
 }

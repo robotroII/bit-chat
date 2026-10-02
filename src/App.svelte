@@ -24,9 +24,10 @@
   let chatError = $state('')
   let transcriptEl: HTMLElement | undefined = $state()
 
-  // True while the user is typing OR talking — renderers show their
-  // "listening" face.
-  const listening = $derived(text.trim().length > 0 || voice.micActive)
+  // True while the user is typing OR talking, or while Jev is thinking
+  // (waiting for the LLM reply) — renderers show their listening/thinking
+  // face.
+  const listening = $derived(text.trim().length > 0 || voice.micActive || sending)
 
   // Idle bobbing preference (opt-in), persisted across reloads.
   const BOBBING_STORAGE_KEY = 'jev:bobbing'
@@ -78,7 +79,23 @@
   }
 
   // Only a clearly stronger reaction may cut a hold short; anything else waits its turn.
+  // Exception: the same emotion+tone REPLACES the current reaction instead of
+  // queueing — rapid-fire voice analyses would otherwise drain an endless
+  // chain of near-identical holds, freezing the avatar in one emotion long
+  // past the max hold time.
   function receiveReaction(res: ReactionResult) {
+    // While the user is still talking, reactions are live previews: the
+    // latest analysis always wins, so the face keeps updating mid-speech
+    // instead of stacking a queue that drains after the pause.
+    if (voice.micActive) {
+      showReaction(res)
+      return
+    }
+    if (held && res.emotion === held.emotion && res.tone === held.tone) {
+      if (queued && queued.emotion === res.emotion && queued.tone === res.tone) queued = null
+      showReaction(res)
+      return
+    }
     if (!held || (res.intensity >= PANIC_INTENSITY && res.intensity > held.intensity)) {
       showReaction(res)
     } else {
@@ -203,9 +220,35 @@
     void sendToLlm()
   }
 
+  // While the mic is live, mirror the growing transcript into the textarea:
+  // the user sees what's recognized and the avatar can react mid-speech.
+  $effect(() => {
+    if (!voice.micActive) return
+    const live = `${voice.finalText} ${voice.interim}`.trim()
+    if (live) text = live
+  })
+
+  // Mid-speech analysis on a fixed cadence. The typing debounce resets on
+  // every text change, and voice interims arrive faster than 300ms — the
+  // timer would starve and never fire. analyze() no-ops when the text
+  // hasn't changed, so a steady interval is safe.
+  let voiceAnalyzeTimer: ReturnType<typeof setInterval> | undefined
+  $effect(() => {
+    if (!voice.micActive || voiceAnalyzeTimer) return
+    voiceAnalyzeTimer = setInterval(() => {
+      if (voice.micActive) void analyze()
+    }, 1500)
+    return () => {
+      clearInterval(voiceAnalyzeTimer)
+      voiceAnalyzeTimer = undefined
+    }
+  })
+
   function toggleMic() {
     if (voice.micActive) {
-      voice.stopListening()
+      // Clicking the mic again commits immediately — no need to wait out
+      // the silence window.
+      voice.stopListening(true)
     } else {
       void voice.startListening()
     }
