@@ -1,6 +1,7 @@
 import { cartmanRenderer } from './renderers/cartman'
 import { emojiRenderer } from './renderers/emoji'
 import { kugutuRenderer } from './renderers/kugutu'
+import { tronRenderer } from './renderers/tron'
 import { vrmRenderer } from './renderers/vrm'
 import type { ReactionRenderer } from './types'
 
@@ -12,6 +13,7 @@ const ALL_RENDERERS: readonly ReactionRenderer[] = [
   emojiRenderer,
   cartmanRenderer,
   kugutuRenderer,
+  tronRenderer,
   vrmRenderer,
 ]
 
