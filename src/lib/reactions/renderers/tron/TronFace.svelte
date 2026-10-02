@@ -14,6 +14,7 @@ import { resolveTronState, type BitShape, type TronBitState } from './mapping'
     bobbing = false,
     speaking = false,
     voiceMouthOpen = 0,
+    micLevel = 0,
   }: ReactionViewProps = $props()
 
   let container = $state<HTMLDivElement | null>(null)
@@ -39,6 +40,8 @@ import { resolveTronState, type BitShape, type TronBitState } from './mapping'
     wander: 0,
     wanderHz: 0,
   }
+  // Live mic amplitude, mirrored into the loop by the effect below.
+  let micPulse = 0
 
   onMount(() => {
     if (!container) return
@@ -156,9 +159,11 @@ import { resolveTronState, type BitShape, type TronBitState } from './mapping'
       // Values above 1 (toneMapped = false) are HDR → they exceed the bloom
       // threshold and glow, while the dark body stays below it. Flicker
       // (terrified) modulates the brightness with a fast double-sine wave.
+      // While the user talks, the live mic level rides on top — the bit
+      // brightens with your voice.
       const flickerMul =
         1 - target.flicker * (0.5 + 0.5 * Math.sin(motionTime * 31)) * (0.5 + 0.5 * Math.sin(motionTime * 7.3))
-      edgeColor.copy(target.color).multiplyScalar((0.8 + target.glow * 0.75) * flickerMul)
+      edgeColor.copy(target.color).multiplyScalar((0.8 + target.glow * 0.75 + micPulse * 0.9) * flickerMul)
       edgeMaterial.color.lerp(edgeColor, k)
 
       // Shape switching with a pop: when the target shape differs, swap
@@ -190,9 +195,10 @@ import { resolveTronState, type BitShape, type TronBitState } from './mapping'
       active.position.y = THREE.MathUtils.lerp(active.position.y, target.driftY + bobY - target.sink + jitterY, k)
 
       // Scale: per-shape base (disc is flattened) × pop bump × lip-sync
-      // pulse × blink squash (a bit doesn't blink — it flickers hard).
+      // pulse × mic pulse (the bit swells with your voice) × blink squash
+      // (a bit doesn't blink — it flickers hard).
       const [bx, by, bz] = shapeBaseScale[activeShape]
-      const pulseScale = pop * (1 + target.pulse * 0.3)
+      const pulseScale = pop * (1 + target.pulse * 0.3 + micPulse * 0.15)
       const squashScale = 1 - target.squash * 0.6
       active.scale.set(pulseScale * bx, pulseScale * by * squashScale, pulseScale * bz)
 
@@ -216,13 +222,19 @@ import { resolveTronState, type BitShape, type TronBitState } from './mapping'
     }
   })
 
-  // Push the unified weights into the render-loop targets.
+  // Push the unified weights into the render-loop targets. micLevel is
+  // read here (not in the loop) so the RAF closure stays non-reactive.
   $effect(() => {
     target = resolveTronState({ result, listening, reacting, speaking, voiceMouthOpen })
+    micPulse = micLevel
   })
 
   const label = $derived(
-    reacting && result ? `tron bit ${result.emotion} ${result.tone}` : 'tron bit neutral',
+    reacting && result
+      ? `tron bit ${result.emotion} ${result.tone}`
+      : listening
+        ? 'tron bit listening'
+        : 'tron bit neutral',
   )
 </script>
 
@@ -241,7 +253,7 @@ import { resolveTronState, type BitShape, type TronBitState } from './mapping'
        gives the glow margin AND room for the left↔right wander patrol. -->
   <div
     bind:this={container}
-    class="h-44 w-72 {bobbing && !reacting ? 'jev-bob' : ''}"
+    class="h-64 w-full max-w-md {bobbing && !reacting ? 'jev-bob' : ''}"
     style="-webkit-mask-image: radial-gradient(ellipse 78% 82% at center, black 52%, transparent 98%); mask-image: radial-gradient(ellipse 78% 82% at center, black 52%, transparent 98%)"
     role="img"
     aria-label={label}

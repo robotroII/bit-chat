@@ -375,19 +375,21 @@
     </div>
   </header>
 
-  <!-- Main content: the only scrollable region -->
-  <main class="min-h-0 flex-1 overflow-y-auto">
-    <div class="mx-auto flex h-full max-w-xl flex-col justify-center gap-6 px-4 py-6">
-      <section class="rounded-xl border border-gray-800 bg-gray-900/60 p-6">
-        <h2 class="mb-4 text-xl font-semibold">{m.emotion_title()}</h2>
-        <!-- Chat transcript: user messages right, Jev's replies left. The
-             reply is also fed into the emotion pipeline (see sendToLlm). -->
-        {#if chatMessages.length > 0 || sending}
-          <div
-            bind:this={transcriptEl}
-            class="mt-4 max-h-64 min-h-0 space-y-3 overflow-y-auto pr-1"
-            aria-live="polite"
-          >
+  <!-- Main: chat history fills the left, avatar panel (~38% width, full
+       height → portrait/skyscraper) docks the right. Both regions scroll
+       internally; the page itself never scrolls. -->
+  <main class="flex min-h-0 flex-1">
+    <!-- Chat transcript: user messages right, Jev's replies left. The
+         reply is also fed into the emotion pipeline (see sendToLlm). -->
+    <section class="flex min-h-0 flex-1 flex-col px-4 py-4">
+      <div
+        bind:this={transcriptEl}
+        class="mx-auto min-h-0 w-full max-w-3xl flex-1 space-y-3 overflow-y-auto pr-1"
+        aria-live="polite"
+      >
+        {#if chatMessages.length === 0 && !sending}
+          <p class="pt-10 text-center text-sm text-gray-500">{m.welcome()}</p>
+        {/if}
             {#each chatMessages as msg, i (i)}
               <div class="flex {msg.role === 'user' ? 'justify-end' : 'justify-start'}">
                 <div
@@ -413,13 +415,38 @@
                 </div>
               </div>
             {/if}
-          </div>
-        {/if}
+      </div>
+    </section>
 
+    <!-- Avatar panel: ~38% width, full main height → portrait/skyscraper.
+         The renderer is picked via the dropdown in the dock below; keyed
+         each = remount on switch (clean player lifecycle). -->
+    <aside class="flex min-h-0 w-[38%] min-w-[300px] shrink-0 flex-col items-center justify-center gap-5 overflow-hidden border-l border-gray-800 bg-gray-900/40 px-4">
+      {#each [rendererRegistry.active] as r (r.id)}
+        {@const Active = r.component}
+        <Active {result} {listening} {reacting} {bobbing} speaking={voice.speaking} voiceMouthOpen={voice.mouthOpen} micLevel={voice.micLevel} />
+      {/each}
+      {#if result}
+        <div class="flex flex-wrap items-center justify-center gap-2">
+          <span class="rounded-full bg-indigo-600/20 px-4 py-1.5 text-sm font-semibold text-indigo-300 capitalize">
+            {result.emotion}
+          </span>
+          <span class="rounded-full bg-purple-600/20 px-4 py-1.5 text-sm font-semibold text-purple-300 capitalize">
+            {result.tone}
+          </span>
+        </div>
+      {/if}
+    </aside>
+  </main>
+
+  <!-- Bottom dock: input row on top; intensity bar + controls beneath it;
+       the debug console (collapsed by default) stays at the very bottom. -->
+  <footer class="shrink-0 border-t border-gray-800 bg-gray-900/80 px-4 py-3 backdrop-blur">
+    <div class="mx-auto max-w-3xl">
         <!-- Input row: typing keeps the quick-reaction path; Enter/Send
              submits to the larger LLM. The mic starts speech recognition;
              a 1.2s silence auto-sends the utterance. -->
-        <div class="mt-4 flex items-end gap-2">
+        <div class="flex items-end gap-2">
           {#if voice.sttSupported}
             <button
               type="button"
@@ -477,30 +504,10 @@
           <p class="mt-4 rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-300">{error}</p>
         {/if}
 
-        <div class="mt-5 space-y-4">
-          <div class="flex flex-col items-center gap-3">
-            <!-- The single active renderer, picked via the dropdown below.
-                 Keyed each = remount on switch (clean player lifecycle). -->
-            <div class="flex min-h-40 flex-wrap items-center justify-center gap-6">
-              {#each [rendererRegistry.active] as r (r.id)}
-                {@const Active = r.component}
-                <Active {result} {listening} {reacting} {bobbing} speaking={voice.speaking} voiceMouthOpen={voice.mouthOpen} />
-              {/each}
-            </div>
-            {#if result}
-              <div class="flex flex-wrap items-center justify-center gap-2">
-                <span class="rounded-full bg-indigo-600/20 px-4 py-1.5 text-sm font-semibold text-indigo-300 capitalize">
-                  {result.emotion}
-                </span>
-                <span class="rounded-full bg-purple-600/20 px-4 py-1.5 text-sm font-semibold text-purple-300 capitalize">
-                  {result.tone}
-                </span>
-              </div>
-            {/if}
-          </div>
-
+        <!-- Intensity bar + renderer/voice controls beneath the input. -->
+        <div class="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
           {#if result}
-            <div>
+            <div class="min-w-52 flex-1">
               <div class="mb-1.5 flex justify-between text-sm text-gray-400">
                 <span>{m.emotion_intensity()}</span>
                 <span class="font-medium text-gray-200">{result.intensity}/5</span>
@@ -558,11 +565,8 @@
             {/if}
           </div>
         </div>
-      </section>
-
-      <p class="text-center text-sm text-gray-500">{m.welcome()}</p>
     </div>
-  </main>
+  </footer>
 
   <!-- Debug console: docked to the bottom, overlays main when open -->
   <section

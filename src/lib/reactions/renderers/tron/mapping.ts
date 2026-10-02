@@ -132,6 +132,27 @@ export function motionForEmotion(emotion: EmotionCategory): BitMotion {
   return MOTION_BY_EMOTION[emotion]
 }
 
+/**
+ * Listening signature: the bit leans in toward the user and nods gently —
+ * the "I'm all ears" pose. Distinct from every emotion signature so the
+ * listening state reads clearly on an abstract shape (brow/gaze channels
+ * alone are invisible here).
+ */
+export const MOTION_LISTENING: BitMotion = {
+  shape: 'octa',
+  jitter: 0,
+  bob: 0.12,
+  bobHz: 1.2,
+  sink: 0,
+  lean: 0.25,
+  flicker: 0,
+  wander: 0,
+  wanderHz: 0,
+}
+
+/** Listening color: amber — "I'm all ears" (the curious hue, reused). */
+const LISTENING_COLOR = new THREE.Color(0xffaa00)
+
 /** Fallback for unknown categories. */
 const NEUTRAL_COLOR = new THREE.Color(EMOTION_COLOR.neutral!)
 
@@ -206,5 +227,13 @@ export function resolveTronState(
   // Only a held reaction colors the bit by category; idle/listening poses
   // fall back to the channel argmax (relaxed → teal, neutral → dim cyan).
   const emotion = props.reacting && props.result ? props.result.emotion : undefined
-  return tronFromAvatarExpression(ax, emotion)
+  const state = tronFromAvatarExpression(ax, emotion)
+  // Listening (mic open or the user typing): lean in + amber so the state
+  // is unmistakable. A held emotion keeps precedence — mid-speech live
+  // previews must not be masked by the listening pose.
+  if (!emotion && props.listening) {
+    state.color = LISTENING_COLOR.clone()
+    Object.assign(state, MOTION_LISTENING)
+  }
+  return state
 }
