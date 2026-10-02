@@ -58,6 +58,10 @@ class VoiceController {
 
   /** Callback invoked with the completed utterance when the silence timer fires. */
   onUtterance: ((text: string) => void) | null = null
+  /** Callback invoked when Jev finishes speaking (natural end, error,
+   *  watchdog or hard timeout). The app releases the reaction hold so the
+   *  avatar relaxes instead of freezing in the emotion's open-mouth pose. */
+  onSpeechEnd: (() => void) | null = null
 
   // ── Capability probes ───────────────────────────────────────────────────
   get sttSupported(): boolean {
@@ -295,6 +299,7 @@ class VoiceController {
 
   stopSpeaking(): void {
     if (!this.ttsSupported) return
+    const wasSpeaking = this.speaking
     window.speechSynthesis.cancel()
     if (this.speakTimeout !== undefined) {
       clearTimeout(this.speakTimeout)
@@ -304,6 +309,7 @@ class VoiceController {
     this.cancelEnvelope()
     this.speaking = false
     this.mouthOpen = 0
+    if (wasSpeaking) this.onSpeechEnd?.()
   }
 
   /**
@@ -381,10 +387,12 @@ class VoiceController {
       clearTimeout(this.speakTimeout)
       this.speakTimeout = undefined
     }
+    const wasSpeaking = this.speaking
     this.currentUtterance = null
     this.speaking = false
     this.cancelEnvelope()
     this.mouthOpen = 0
+    if (wasSpeaking) this.onSpeechEnd?.()
   }
 
   // ── Lip-sync envelope ───────────────────────────────────────────────────

@@ -74,6 +74,13 @@
       showReaction(queued)
       return
     }
+    // Jev is still talking: keep the current emotion on screen (re-armed in
+    // chunks) instead of dropping to a static neutral face mid-speech — the
+    // speech-end hook resets everything once he's done.
+    if (voice.speaking) {
+      holdTimer = setTimeout(releaseHold, MIN_HOLD_MS)
+      return
+    }
     held = null
     reacting = false
   }
@@ -227,6 +234,18 @@
     const live = `${voice.finalText} ${voice.interim}`.trim()
     if (live) text = live
   })
+
+  // When Jev finishes talking, FULLY reset the reaction state — never pop
+  // the queue. Popping here would start a fresh hold AFTER the speech (the
+  // frozen open mouth); whatever is queued at that point is stale, and the
+  // face should relax once Jev is done talking.
+  voice.onSpeechEnd = () => {
+    clearTimeout(holdTimer)
+    holdTimer = undefined
+    queued = null
+    held = null
+    reacting = false
+  }
 
   // Mid-speech analysis on a fixed cadence. The typing debounce resets on
   // every text change, and voice interims arrive faster than 300ms — the
