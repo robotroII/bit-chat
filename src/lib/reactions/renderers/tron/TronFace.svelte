@@ -36,6 +36,8 @@ import { resolveTronState, type BitShape, type TronBitState } from './mapping'
     sink: 0,
     lean: 0,
     flicker: 0,
+    wander: 0,
+    wanderHz: 0,
   }
 
   onMount(() => {
@@ -172,8 +174,10 @@ import { resolveTronState, type BitShape, type TronBitState } from './mapping'
       const pop = 1 + 0.6 * Math.sin(Math.min(1, popT) * Math.PI)
 
       // Motion engine: bob (excitement/YES hop), jitter (anger/panic),
-      // sink (sadness), plus the gaze drift and lip-sync pulse.
+      // sink (sadness), wander (left↔right patrol across the landscape
+      // canvas while responding), plus gaze drift and lip-sync pulse.
       const bobY = target.bobHz > 0 ? Math.sin(motionTime * target.bobHz * Math.PI * 2) * target.bob : 0
+      const wanderX = target.wanderHz > 0 ? Math.sin(motionTime * target.wanderHz * Math.PI * 2) * target.wander : 0
       const jitterX = target.jitter > 0 ? (Math.random() - 0.5) * 2 * target.jitter : 0
       const jitterY = target.jitter > 0 ? (Math.random() - 0.5) * 2 * target.jitter : 0
 
@@ -182,7 +186,7 @@ import { resolveTronState, type BitShape, type TronBitState } from './mapping'
       active.rotation.y = spinAngle
       active.rotation.z = THREE.MathUtils.lerp(active.rotation.z, target.tilt, k)
       active.rotation.x = THREE.MathUtils.lerp(active.rotation.x, target.lean, k)
-      active.position.x = THREE.MathUtils.lerp(active.position.x, target.driftX + jitterX, k)
+      active.position.x = THREE.MathUtils.lerp(active.position.x, target.driftX + wanderX + jitterX, k)
       active.position.y = THREE.MathUtils.lerp(active.position.y, target.driftY + bobY - target.sink + jitterY, k)
 
       // Scale: per-shape base (disc is flattened) × pop bump × lip-sync
@@ -225,19 +229,20 @@ import { resolveTronState, type BitShape, type TronBitState } from './mapping'
 <!--
   Tron Bit (1982) — a floating glowing octahedron program, plain three.js.
   Emotion is expressed through color, glow, spin speed, posture tilt and
-  hover drift; TTS lip-sync pulses the scale.
+  hover drift; TTS lip-sync pulses the scale. While responding, the bit
+  patrols the landscape canvas left ↔ right (wander).
 
   The radial mask fades the canvas edges to transparent so the bloom halo
   dissolves into the page instead of hitting a hard canvas boundary (which
   reads as an uncanny glowing rectangle at high emotion brightness).
 -->
 <div class="transition-transform duration-500" style:transform={`scale(${reacting ? 1.08 : 1})`}>
-  <!-- Larger than the other avatars: transparent canvas, so the extra room is
-       invisible — it just gives the glow space to fade before the edge. -->
+  <!-- Landscape format: extra width is invisible (transparent canvas) — it
+       gives the glow margin AND room for the left↔right wander patrol. -->
   <div
     bind:this={container}
-    class="h-56 w-48 {bobbing && !reacting ? 'jev-bob' : ''}"
-    style="-webkit-mask-image: radial-gradient(ellipse 72% 72% at center, black 55%, transparent 97%); mask-image: radial-gradient(ellipse 72% 72% at center, black 55%, transparent 97%)"
+    class="h-44 w-72 {bobbing && !reacting ? 'jev-bob' : ''}"
+    style="-webkit-mask-image: radial-gradient(ellipse 78% 82% at center, black 52%, transparent 98%); mask-image: radial-gradient(ellipse 78% 82% at center, black 52%, transparent 98%)"
     role="img"
     aria-label={label}
   ></div>

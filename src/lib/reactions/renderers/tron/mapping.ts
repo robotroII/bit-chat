@@ -39,6 +39,10 @@ export interface TronBitState {
   lean: number
   /** Glow flicker depth (terrified = unstable program). */
   flicker: number
+  /** Horizontal patrol amplitude while responding (left ↔ right wander). */
+  wander: number
+  /** Patrol frequency in Hz (a full left→right→left cycle per period). */
+  wanderHz: number
 }
 
 /**
@@ -82,6 +86,10 @@ export interface BitMotion {
   sink: number
   lean: number
   flicker: number
+  /** Horizontal patrol amplitude while responding (left ↔ right wander). */
+  wander: number
+  /** Patrol frequency in Hz (a full left→right→left cycle per period). */
+  wanderHz: number
 }
 
 const MOTION_NEUTRAL: BitMotion = {
@@ -92,22 +100,25 @@ const MOTION_NEUTRAL: BitMotion = {
   sink: 0,
   lean: 0,
   flicker: 0,
+  wander: 0,
+  wanderHz: 0,
 }
 
 /**
  * Emotion → motion signature. Tuned LOUD so each state reads instantly
  * even from across the room: happy hops emphatically, sad sinks deep,
  * angry shakes violently, terrified flickers hard, suspicious leans away,
- * curious bobs while investigating.
+ * curious bobs while investigating. Every responding state also patrols
+ * the landscape canvas (wander) — pacing speed matches the feeling.
  */
 const MOTION_BY_EMOTION: Record<EmotionCategory, BitMotion> = {
-  happy: { shape: 'tetra', jitter: 0, bob: 0.45, bobHz: 4, sink: 0, lean: 0, flicker: 0 },
-  sad: { shape: 'disc', jitter: 0, bob: 0, bobHz: 0, sink: 0.55, lean: 0, flicker: 0 },
-  angry: { shape: 'octa', jitter: 0.2, bob: 0, bobHz: 0, sink: 0, lean: 0, flicker: 0 },
-  surprised: { shape: 'octa', jitter: 0, bob: 0.25, bobHz: 6, sink: 0, lean: 0, flicker: 0 },
-  terrified: { shape: 'octa', jitter: 0.28, bob: 0.15, bobHz: 8, sink: 0.2, lean: 0, flicker: 0.8 },
-  curious: { shape: 'octa', jitter: 0, bob: 0.2, bobHz: 2, sink: 0, lean: 0.25, flicker: 0 },
-  suspicious: { shape: 'octa', jitter: 0, bob: 0, bobHz: 0, sink: 0.15, lean: -0.6, flicker: 0 },
+  happy: { shape: 'tetra', jitter: 0, bob: 0.45, bobHz: 4, sink: 0, lean: 0, flicker: 0, wander: 1.0, wanderHz: 0.25 },
+  sad: { shape: 'disc', jitter: 0, bob: 0, bobHz: 0, sink: 0.55, lean: 0, flicker: 0, wander: 0.5, wanderHz: 0.1 },
+  angry: { shape: 'octa', jitter: 0.2, bob: 0, bobHz: 0, sink: 0, lean: 0, flicker: 0, wander: 1.1, wanderHz: 0.3 },
+  surprised: { shape: 'octa', jitter: 0, bob: 0.25, bobHz: 6, sink: 0, lean: 0, flicker: 0, wander: 0.8, wanderHz: 0.4 },
+  terrified: { shape: 'octa', jitter: 0.28, bob: 0.15, bobHz: 8, sink: 0.2, lean: 0, flicker: 0.8, wander: 1.2, wanderHz: 0.5 },
+  curious: { shape: 'octa', jitter: 0, bob: 0.2, bobHz: 2, sink: 0, lean: 0.25, flicker: 0, wander: 0.9, wanderHz: 0.18 },
+  suspicious: { shape: 'octa', jitter: 0, bob: 0, bobHz: 0, sink: 0.15, lean: -0.6, flicker: 0, wander: 0.7, wanderHz: 0.12 },
   neutral: MOTION_NEUTRAL,
 }
 
