@@ -5,6 +5,7 @@
     evaluateComplexReaction,
     type ReactionResult,
   } from './lib/emotion'
+  import { sendChatMessage, type ChatMessage } from './lib/chat'
   import { debugLog, type DebugEntry } from './lib/debug.svelte'
   import { rendererRegistry } from './lib/reactions/registry.svelte'
 
@@ -14,6 +15,13 @@
   let loading = $state(false)
   let result = $state<ReactionResult | null>(null)
   let error = $state('')
+
+  // Chat with the larger LLM: its reply is printed in the transcript AND fed
+  // back into the emotion pipeline, so the avatar reacts to what Jev says.
+  let chatMessages = $state<ChatMessage[]>([])
+  let sending = $state(false)
+  let chatError = $state('')
+  let transcriptEl: HTMLElement | undefined = $state()
 
   // True while the user is typing — renderers show their "listening" face.
   const listening = $derived(text.trim().length > 0)
@@ -137,6 +145,49 @@
     }
   }
 
+  // Submit the transcript to the larger LLM. The reply is shown in the chat
+  // and its text is analyzed like any other input, so the avatar reacts to
+  // Jev's answer through the existing hold-queue (receiveReaction).
+  async function sendToLlm() {
+    const input = text.trim()
+    if (!input || sending) return
+
+    clearDebounce()
+    text = ''
+    chatError = ''
+    chatMessages = [...chatMessages, { role: 'user', content: input }]
+    sending = true
+
+    let reply: string
+    try {
+      reply = await sendChatMessage(chatMessages)
+      chatMessages = [...chatMessages, { role: 'assistant', content: reply }]
+    } catch (e) {
+      chatError = e instanceof Error && e.message === 'MISSING_KEY'
+        ? m.emotion_error_no_key()
+        : m.chat_error_failed()
+      return
+    } finally {
+      sending = false
+    }
+
+    // The reply drives the avatar: same pipeline as user-typed text. A
+    // failure here must not erase the reply — the avatar just keeps its
+    // current face until the next reaction.
+    try {
+      receiveReaction(await evaluateComplexReaction(reply))
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function onChatKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      void sendToLlm()
+    }
+  }
+
   function switchLocale(next: Locale) {
     if (next === locale) return
     setLocale(next)
@@ -156,6 +207,12 @@
   const errorCount = $derived(
     debugLog.entries.filter((e) => e.error !== undefined || (e.status !== undefined && e.status >= 400)).length,
   )
+
+  // Keep the transcript pinned to the newest message.
+  $effect(() => {
+    void chatMessages.length
+    transcriptEl?.scrollTo({ top: transcriptEl.scrollHeight })
+  })
 
   function statusColor(e: DebugEntry): string {
     if (e.error) return 'text-red-400'
@@ -211,11 +268,63 @@
     <div class="mx-auto flex h-full max-w-xl flex-col justify-center gap-6 px-4 py-6">
       <section class="rounded-xl border border-gray-800 bg-gray-900/60 p-6">
         <h2 class="mb-4 text-xl font-semibold">{m.emotion_title()}</h2>
-        <textarea
-          class="min-h-24 w-full resize-y rounded-lg border border-gray-700 bg-gray-950 px-4 py-3 text-gray-100 placeholder-gray-500 outline-none transition focus:border-indigo-500"
-          bind:value={text}
-          placeholder={m.emotion_placeholder()}
-        ></textarea>
+        <!-- Chat transcript: user messages right, Jev's replies left. The
+             reply is also fed into the emotion pipeline (see sendToLlm). -->
+        {#if chatMessages.length > 0 || sending}
+          <div
+            bind:this={transcriptEl}
+            class="mt-4 max-h-64 min-h-0 space-y-3 overflow-y-auto pr-1"
+            aria-live="polite"
+          >
+            {#each chatMessages as msg, i (i)}
+              <div class="flex {msg.role === 'user' ? 'justify-end' : 'justify-start'}">
+                <div
+                  class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed {msg.role === 'user'
+                    ? 'rounded-br-sm bg-indigo-600 text-white'
+                    : 'rounded-bl-sm bg-gray-800 text-gray-100'}"
+                >
+                  {#if msg.role === 'assistant'}
+                    <p class="mb-0.5 text-xs font-semibold text-indigo-300">Jev</p>
+                  {/if}
+                  <p class="whitespace-pre-wrap">{msg.content}</p>
+                </div>
+              </div>
+            {/each}
+            {#if sending}
+              <div class="flex justify-start">
+                <div class="rounded-2xl rounded-bl-sm bg-gray-800 px-4 py-3" aria-label={m.chat_thinking()}>
+                  <span class="flex items-center gap-1.5">
+                    <span class="size-2 animate-bounce rounded-full bg-gray-500 [animation-delay:-0.3s]"></span>
+                    <span class="size-2 animate-bounce rounded-full bg-gray-500 [animation-delay:-0.15s]"></span>
+                    <span class="size-2 animate-bounce rounded-full bg-gray-500"></span>
+                  </span>
+                </div>
+              </div>
+            {/if}
+          </div>
+        {/if}
+
+        <!-- Input row: typing keeps the quick-reaction path; Enter/Send
+             submits to the larger LLM. -->
+        <div class="mt-4 flex items-end gap-2">
+          <textarea
+            class="min-h-12 flex-1 resize-y rounded-lg border border-gray-700 bg-gray-950 px-4 py-3 text-gray-100 placeholder-gray-500 outline-none transition focus:border-indigo-500"
+            bind:value={text}
+            onkeydown={onChatKeydown}
+            placeholder={m.emotion_placeholder()}
+          ></textarea>
+          <button
+            class="shrink-0 rounded-lg bg-indigo-600 px-4 py-3 font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+            onclick={() => void sendToLlm()}
+            disabled={!text.trim() || sending}
+          >
+            {m.chat_send()}
+          </button>
+        </div>
+
+        {#if chatError}
+          <p class="mt-4 rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-300">{chatError}</p>
+        {/if}
 
         {#if error}
           <p class="mt-4 rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-300">{error}</p>
