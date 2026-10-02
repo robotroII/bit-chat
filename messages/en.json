@@ -13,6 +13,7 @@
   "emotion_bobbing": "Idle bobbing",
   "emotion_renderer": "Avatar",
   "emotion_dev_emoji": "Emoji preview (dev)",
+  "api_key": "OpenRouter key",
   "emotion_confidence": "Confidence",
   "emotion_raw": "Raw model output",
   "chat_send": "Send",

@@ -15,6 +15,8 @@ export interface ReactionViewProps {
   speaking: boolean
   /** Lip-sync amplitude 0..1 while Jev speaks; 0 otherwise. */
   voiceMouthOpen: number
+  /** Live microphone input level 0..1 while the user talks; 0 otherwise. */
+  micLevel: number
 }
 
 /**

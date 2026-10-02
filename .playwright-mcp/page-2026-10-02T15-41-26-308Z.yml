@@ -1,0 +1,39 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - heading "Hello, Jev!" [level=1] [ref=e5]
+    - group "Language" [ref=e7]:
+      - button "en" [pressed] [ref=e8]
+      - button "de" [ref=e9]
+  - main [ref=e10]:
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - heading "Emotion Analysis" [level=2] [ref=e13]
+        - generic [ref=e14]:
+          - button "🎤" [ref=e15]
+          - textbox "Type some text to analyze its emotion…" [ref=e16]
+          - button "Send" [disabled] [ref=e17]
+        - generic [ref=e18]:
+          - img "cartman neutral" [ref=e22]
+          - generic [ref=e42]:
+            - generic [ref=e43]:
+              - generic [ref=e44]: Avatar
+              - combobox "Avatar" [ref=e45]:
+                - option "Cartman" [selected]
+                - option "Kugutu"
+                - option "Tron Bit"
+                - option "Seed-san (VRM)"
+            - generic [ref=e46]:
+              - checkbox "Emoji preview (dev)" [ref=e47]
+              - text: Emoji preview (dev)
+            - generic [ref=e48]:
+              - checkbox "Idle bobbing" [ref=e49]
+              - text: Idle bobbing
+            - generic [ref=e50]:
+              - checkbox "Jev speaks" [ref=e51]
+              - text: Jev speaks
+      - paragraph [ref=e52]: Welcome to your Vite + Svelte + Tailwind app.
+  - region "Debug console" [ref=e53]:
+    - button "▾ Debug 0" [ref=e55]:
+      - generic [ref=e56]: ▾
+      - text: Debug
+      - generic [ref=e57]: "0"

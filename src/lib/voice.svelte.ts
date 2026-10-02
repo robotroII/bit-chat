@@ -370,16 +370,18 @@ class VoiceController {
     this.currentUtterance = utterance
     window.speechSynthesis.speak(utterance)
 
-    // Hard cap: Chrome occasionally never fires onend (stuck engine) —
-    // force-end past a generous duration estimate so the avatar can't
-    // freeze mid-talk with the mouth hanging open.
-    const words = text.trim().split(/\s+/).length
-    const estimatedMs = (words / (2.6 * utterance.rate)) * 1000 + 2500
+    // Absolute last-resort cap — NOT a duration estimate. Chrome's voices
+    // speak far slower than 2.6 words/s once sentence pauses are factored
+    // in, so an estimate cancels real speech mid-sentence. The watchdog in
+    // the envelope loop handles the actual "engine stuck" case within ~1s
+    // of synthesis going idle; this cap only exists so the mouth can't hang
+    // open forever if every other signal fails. Generous: 30s + 0.5s/word.
+    const words = spoken.trim().split(/\s+/).length
     this.speakTimeout = setTimeout(() => {
-      console.info('[voice] speak hard-timeout — forcing end')
+      console.info('[voice] speak absolute cap — forcing end')
       window.speechSynthesis.cancel()
       this.endSpeech()
-    }, estimatedMs)
+    }, 30_000 + words * 500)
   }
 
   private endSpeech(): void {

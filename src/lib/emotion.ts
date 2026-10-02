@@ -1,4 +1,5 @@
 import { loggedFetch } from './debug.svelte'
+import { effectiveApiKey } from './api-key.svelte'
 
 // 1. Type contracts matching Jev's API layout
 export type EmotionCategory =
@@ -43,7 +44,7 @@ function argMax(prob: Record<string, number> | undefined): string | undefined {
 }
 
 export async function evaluateComplexReaction(text: string): Promise<ReactionResult> {
-  const apiKey = import.meta.env.VITE_OPENROUTER_KEY
+  const apiKey = effectiveApiKey()
   if (!apiKey) {
     throw new Error('MISSING_KEY')
   }
