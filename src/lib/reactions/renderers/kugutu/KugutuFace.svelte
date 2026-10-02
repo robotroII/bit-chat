@@ -4,8 +4,14 @@
   import type { ReactionViewProps } from '../../types'
   import { buildJevPack, resolveKugutuDirection } from './mapping'
 
-  let { result = null, listening = false, reacting = false, bobbing = false }: ReactionViewProps =
-    $props()
+  let {
+    result = null,
+    listening = false,
+    reacting = false,
+    bobbing = false,
+    speaking = false,
+    voiceMouthOpen = 0,
+  }: ReactionViewProps = $props()
 
   const pack = buildJevPack()
 
@@ -42,7 +48,7 @@
   $effect(() => {
     const p = player
     if (!p) return
-    const dir = resolveKugutuDirection({ result, listening, reacting })
+    const dir = resolveKugutuDirection({ result, listening, reacting, speaking, voiceMouthOpen })
     p.setEmotion(dir.emotion, dir.intensity)
     p.setPart('mouth', dir.mouth)
     p.setMouthOpen(dir.mouthOpen)

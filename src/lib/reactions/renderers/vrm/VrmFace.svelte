@@ -8,8 +8,14 @@
   import { resolveAvatarExpression } from '../../avatar-expression'
   import { headTiltToDegrees, vrmFromAvatarExpression } from './mapping'
 
-  let { result = null, listening = false, reacting = false, bobbing = false }: ReactionViewProps =
-    $props()
+  let {
+    result = null,
+    listening = false,
+    reacting = false,
+    bobbing = false,
+    speaking = false,
+    voiceMouthOpen = 0,
+  }: ReactionViewProps = $props()
 
   let container = $state<HTMLDivElement | null>(null)
   let model = $state<VRM | null>(null)
@@ -108,7 +114,7 @@
   $effect(() => {
     const m = model
     if (!m?.expressionManager) return
-    const ax = resolveAvatarExpression({ result, listening, reacting })
+    const ax = resolveAvatarExpression({ result, listening, reacting, speaking, voiceMouthOpen })
     const map = vrmFromAvatarExpression(ax)
     for (const [name, weight] of Object.entries(map) as [VRMExpressionPresetName, number][]) {
       m.expressionManager.setValue(name, weight)

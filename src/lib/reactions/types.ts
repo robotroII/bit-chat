@@ -11,6 +11,10 @@ export interface ReactionViewProps {
   reacting: boolean
   /** Idle bobbing animation, opt-in user preference. */
   bobbing: boolean
+  /** True while Jev is speaking a reply out loud (TTS active). */
+  speaking: boolean
+  /** Lip-sync amplitude 0..1 while Jev speaks; 0 otherwise. */
+  voiceMouthOpen: number
 }
 
 /**

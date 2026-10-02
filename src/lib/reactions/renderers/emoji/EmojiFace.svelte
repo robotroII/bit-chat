@@ -2,10 +2,16 @@
   import type { ReactionViewProps } from '../../types'
   import { resolveEmoji } from './mapping'
 
-  let { result = null, listening = false, reacting = false, bobbing = false }: ReactionViewProps =
-    $props()
+  let {
+    result = null,
+    listening = false,
+    reacting = false,
+    bobbing = false,
+    speaking = false,
+    voiceMouthOpen = 0,
+  }: ReactionViewProps = $props()
 
-  const emoji = $derived(resolveEmoji({ result, listening, reacting }))
+  const emoji = $derived(resolveEmoji({ result, listening, reacting, speaking, voiceMouthOpen }))
   const label = $derived(
     reacting && result ? `${result.emotion} ${result.tone}` : listening ? 'listening' : 'neutral',
   )

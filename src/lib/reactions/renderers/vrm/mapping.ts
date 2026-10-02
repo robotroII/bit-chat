@@ -44,7 +44,7 @@ export function headTiltToDegrees(ax: AvatarExpression): number {
 
 /** Resolve the VRM expression map for the current UI state. */
 export function resolveVrmExpressions(
-  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting'>,
+  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting' | 'speaking' | 'voiceMouthOpen'>,
 ): Partial<Record<VRMExpressionPresetName, number>> {
   return vrmFromAvatarExpression(resolveAvatarExpression(props))
 }

@@ -31,7 +31,7 @@ export interface KugutuDirection {
  */
 export function kugutuFromAvatarExpression(
   ax: AvatarExpression,
-  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting'>,
+  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting' | 'speaking' | 'voiceMouthOpen'>,
 ): KugutuDirection {
   const { listening, reacting } = props
 
@@ -85,7 +85,7 @@ export function kugutuFromAvatarExpression(
 
 /** Resolve the Jev actor state for the current UI state. */
 export function resolveKugutuDirection(
-  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting'>,
+  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting' | 'speaking' | 'voiceMouthOpen'>,
 ): KugutuDirection {
   return kugutuFromAvatarExpression(resolveAvatarExpression(props), props)
 }

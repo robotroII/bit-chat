@@ -45,7 +45,7 @@ export const NEUTRAL_EXPRESSION: CartmanExpression = {
  */
 export function cartmanFromAvatarExpression(
   ax: AvatarExpression,
-  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting'>,
+  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting' | 'speaking' | 'voiceMouthOpen'>,
 ): CartmanExpression {
   const expr: CartmanExpression = { ...NEUTRAL_EXPRESSION }
 
@@ -106,7 +106,7 @@ export function cartmanFromAvatarExpression(
 
 /** Resolve the Cartman face for the current UI state. */
 export function resolveCartmanExpression(
-  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting'>,
+  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting' | 'speaking' | 'voiceMouthOpen'>,
 ): CartmanExpression {
   return cartmanFromAvatarExpression(resolveAvatarExpression(props), props)
 }

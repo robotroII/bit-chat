@@ -8,6 +8,7 @@
   import { sendChatMessage, type ChatMessage } from './lib/chat'
   import { debugLog, type DebugEntry } from './lib/debug.svelte'
   import { rendererRegistry } from './lib/reactions/registry.svelte'
+  import { voice } from './lib/voice.svelte'
 
   let locale = $state(getLocale())
 
@@ -23,8 +24,9 @@
   let chatError = $state('')
   let transcriptEl: HTMLElement | undefined = $state()
 
-  // True while the user is typing — renderers show their "listening" face.
-  const listening = $derived(text.trim().length > 0)
+  // True while the user is typing OR talking — renderers show their
+  // "listening" face.
+  const listening = $derived(text.trim().length > 0 || voice.micActive)
 
   // Idle bobbing preference (opt-in), persisted across reloads.
   const BOBBING_STORAGE_KEY = 'jev:bobbing'
@@ -174,17 +176,53 @@
     // The reply drives the avatar: same pipeline as user-typed text. A
     // failure here must not erase the reply — the avatar just keeps its
     // current face until the next reaction.
+    let reaction: ReactionResult | null = null
     try {
-      receiveReaction(await evaluateComplexReaction(reply))
+      reaction = await evaluateComplexReaction(reply)
+      receiveReaction(reaction)
     } catch {
       /* ignore */
     }
+
+    // Speak the reply once the emotion is known, so pitch/rate match it.
+    voice.speak(reply, reaction)
   }
 
   function onChatKeydown(e: KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       void sendToLlm()
+    }
+  }
+
+  // Voice: a completed spoken utterance lands in the textarea and is sent
+  // straight to the LLM (hands-free loop). sendToLlm reads `text`, so set it
+  // first; it also clears the pending debounce, so no double-send.
+  voice.onUtterance = (utterance) => {
+    text = utterance
+    void sendToLlm()
+  }
+
+  function toggleMic() {
+    if (voice.micActive) {
+      voice.stopListening()
+    } else {
+      void voice.startListening()
+    }
+  }
+
+  // Map raw SpeechRecognition error codes to actionable guidance.
+  function micErrorMessage(code: string): string {
+    switch (code) {
+      case 'not-allowed':
+      case 'service-not-allowed':
+        return m.voice_error_blocked()
+      case 'audio-capture':
+        return m.voice_error_no_mic()
+      case 'network':
+        return m.voice_error_network()
+      default:
+        return `${m.voice_error()} (${code})`
     }
   }
 
@@ -305,13 +343,31 @@
         {/if}
 
         <!-- Input row: typing keeps the quick-reaction path; Enter/Send
-             submits to the larger LLM. -->
+             submits to the larger LLM. The mic starts speech recognition;
+             a 1.2s silence auto-sends the utterance. -->
         <div class="mt-4 flex items-end gap-2">
+          {#if voice.sttSupported}
+            <button
+              type="button"
+              class="relative shrink-0 rounded-lg border px-3 py-3 transition {voice.micActive
+                ? 'border-red-500 bg-red-950/60 text-red-300'
+                : 'border-gray-700 bg-gray-900 text-gray-300 hover:border-indigo-500 hover:text-indigo-300'}"
+              onclick={toggleMic}
+              aria-pressed={voice.micActive}
+              title={voice.micActive ? m.voice_listening() : m.voice_mic()}
+            >
+              🎤
+              {#if voice.micActive}
+                <span class="absolute -right-1 -top-1 size-3 animate-ping rounded-full bg-red-500"></span>
+                <span class="absolute -right-1 -top-1 size-3 rounded-full bg-red-500"></span>
+              {/if}
+            </button>
+          {/if}
           <textarea
             class="min-h-12 flex-1 resize-y rounded-lg border border-gray-700 bg-gray-950 px-4 py-3 text-gray-100 placeholder-gray-500 outline-none transition focus:border-indigo-500"
             bind:value={text}
             onkeydown={onChatKeydown}
-            placeholder={m.emotion_placeholder()}
+            placeholder={voice.micActive ? m.voice_listening() : m.emotion_placeholder()}
           ></textarea>
           <button
             class="shrink-0 rounded-lg bg-indigo-600 px-4 py-3 font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
@@ -322,8 +378,25 @@
           </button>
         </div>
 
+        {#if voice.micActive}
+          <!-- Live mic level: moves while the recognizer hears audio. A flat
+               bar means the selected input device is silent, muted or wrong. -->
+          <div class="mt-2 h-1 overflow-hidden rounded-full bg-gray-800" aria-hidden="true">
+            <div
+              class="h-full rounded-full bg-emerald-500 transition-[width] duration-100"
+              style:width={`${Math.round(voice.micLevel * 100)}%`}
+            ></div>
+          </div>
+        {/if}
+
         {#if chatError}
           <p class="mt-4 rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-300">{chatError}</p>
+        {/if}
+
+        {#if voice.micError}
+          <p class="mt-4 rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-300">
+            {micErrorMessage(voice.micError)}
+          </p>
         {/if}
 
         {#if error}
@@ -337,7 +410,7 @@
             <div class="flex min-h-40 flex-wrap items-center justify-center gap-6">
               {#each [rendererRegistry.active] as r (r.id)}
                 {@const Active = r.component}
-                <Active {result} {listening} {reacting} {bobbing} />
+                <Active {result} {listening} {reacting} {bobbing} speaking={voice.speaking} voiceMouthOpen={voice.mouthOpen} />
               {/each}
             </div>
             {#if result}
@@ -389,6 +462,26 @@
               <input type="checkbox" bind:checked={bobbing} class="size-4 accent-indigo-500" />
               {m.emotion_bobbing()}
             </label>
+            {#if voice.ttsSupported}
+              <label class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={voice.ttsEnabled}
+                  onchange={() => voice.toggleTts()}
+                  class="size-4 accent-indigo-500"
+                />
+                {m.voice_speak_toggle()}
+              </label>
+              {#if voice.speaking}
+                <button
+                  type="button"
+                  class="rounded-lg border border-gray-700 px-2 py-1 text-gray-300 transition hover:border-red-500 hover:text-red-300"
+                  onclick={() => voice.stopSpeaking()}
+                >
+                  {m.voice_stop()}
+                </button>
+              {/if}
+            {/if}
           </div>
         </div>
       </section>

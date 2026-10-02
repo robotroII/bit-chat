@@ -2,10 +2,18 @@
   import type { ReactionViewProps } from '../../types'
   import { resolveCartmanExpression } from './mapping'
 
-  let { result = null, listening = false, reacting = false, bobbing = false }: ReactionViewProps =
-    $props()
+  let {
+    result = null,
+    listening = false,
+    reacting = false,
+    bobbing = false,
+    speaking = false,
+    voiceMouthOpen = 0,
+  }: ReactionViewProps = $props()
 
-  const expr = $derived(resolveCartmanExpression({ result, listening, reacting }))
+  const expr = $derived(
+    resolveCartmanExpression({ result, listening, reacting, speaking, voiceMouthOpen }),
+  )
   // Reacting bump (1.1x) times an intensity swell (1.0 -> 1.16x).
   const scale = $derived(reacting && result ? 1.1 * (1 + (result.intensity - 1) * 0.04) : 1)
   const label = $derived(

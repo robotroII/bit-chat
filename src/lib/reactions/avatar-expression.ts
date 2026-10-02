@@ -107,14 +107,24 @@ const EMOTION_BASE: Record<EmotionCategory, Partial<AvatarExpression>> = {
  * The one function every avatar renderer shares.
  */
 export function resolveAvatarExpression(
-  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting'>,
+  props: Pick<
+    ReactionViewProps,
+    'result' | 'listening' | 'reacting' | 'speaking' | 'voiceMouthOpen'
+  >,
 ): AvatarExpression {
-  const { result, listening, reacting } = props
+  const { result, listening, reacting, speaking, voiceMouthOpen } = props
   if (!reacting || !result) {
-    // Idle/listening: a thinking glance up-left while the user types.
+    // Idle/listening: a thinking glance up-left while the user types — but
+    // not while Jev himself is speaking (he faces the user).
+    if (speaking) {
+      return applyVoiceMouth(NEUTRAL_AVATAR_EXPRESSION, voiceMouthOpen)
+    }
     return listening
-      ? { ...NEUTRAL_AVATAR_EXPRESSION, relaxed: 0.3, gazeX: -0.35, gazeY: -0.3 }
-      : NEUTRAL_AVATAR_EXPRESSION
+      ? applyVoiceMouth(
+          { ...NEUTRAL_AVATAR_EXPRESSION, relaxed: 0.3, gazeX: -0.35, gazeY: -0.3 },
+          voiceMouthOpen,
+        )
+      : applyVoiceMouth(NEUTRAL_AVATAR_EXPRESSION, voiceMouthOpen)
   }
 
   const { emotion, tone, intensity: level } = result
@@ -147,5 +157,13 @@ export function resolveAvatarExpression(
       break
   }
 
+  return applyVoiceMouth(ax, voiceMouthOpen)
+}
+
+/** The voice layer only ever opens the mouth — it never overrides an emotion. */
+function applyVoiceMouth(ax: AvatarExpression, voiceMouthOpen: number): AvatarExpression {
+  if (voiceMouthOpen > 0) {
+    ax.mouthOpen = Math.max(ax.mouthOpen, voiceMouthOpen)
+  }
   return ax
 }

@@ -59,7 +59,7 @@ export const emojiMatrix: Record<EmotionCategory, Record<ToneSubtext, string[]>>
 
 /** Resolve the display emoji for the current UI state. */
 export function resolveEmoji(
-  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting'>,
+  props: Pick<ReactionViewProps, 'result' | 'listening' | 'reacting' | 'speaking' | 'voiceMouthOpen'>,
 ): string {
   const { result, listening, reacting } = props
   if (reacting && result) {
