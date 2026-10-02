@@ -25,6 +25,20 @@ export interface TronBitState {
   pulse: number
   /** Blink → a quick vertical squash "flicker" (0..1). */
   squash: number
+  /** Movie yes/no shape morph (octa default, tetra YES, disc NO). */
+  shape: BitShape
+  /** High-frequency position shake amplitude (anger, panic). */
+  jitter: number
+  /** Vertical oscillation amplitude (excitement, the YES hop). */
+  bob: number
+  /** Vertical oscillation frequency in Hz. */
+  bobHz: number
+  /** Downward drift (sadness weighs the bit down). */
+  sink: number
+  /** Extra z-axis lean (suspicion leans away). */
+  lean: number
+  /** Glow flicker depth (terrified = unstable program). */
+  flicker: number
 }
 
 /**
@@ -41,6 +55,70 @@ const EMOTION_COLOR: Record<string, number> = {
   curious: 0xffaa00, // amber — investigating
   suspicious: 0xff00aa, // magenta — distrust
   neutral: 0x0891b2, // dim cyan idle
+}
+
+/**
+ * The three Bit shapes from the 1982 movie: the default octahedron, the
+ * tetrahedron it morphs into to say YES, and the flattened disc for NO.
+ */
+export type BitShape = 'octa' | 'tetra' | 'disc'
+
+/**
+ * Per-emotion motion signature — the second expressive layer beyond color.
+ * All values are target-state modifiers consumed by the render loop:
+ * - `shape`: the movie's yes/no morphs (happy = emphatic YES, sad = NO)
+ * - `jitter`: high-frequency position shake (anger, panic)
+ * - `bob`: vertical oscillation amplitude (excitement, the YES hop)
+ * - `bobHz`: bob frequency
+ * - `sink`: downward drift (sadness weighs the bit down)
+ * - `lean`: extra z-axis lean (suspicion leans away from the user)
+ * - `flicker`: glow flicker depth (terrified = unstable program)
+ */
+export interface BitMotion {
+  shape: BitShape
+  jitter: number
+  bob: number
+  bobHz: number
+  sink: number
+  lean: number
+  flicker: number
+}
+
+const MOTION_NEUTRAL: BitMotion = {
+  shape: 'octa',
+  jitter: 0,
+  bob: 0,
+  bobHz: 0,
+  sink: 0,
+  lean: 0,
+  flicker: 0,
+}
+
+/**
+ * Emotion → motion signature. Tuned LOUD so each state reads instantly
+ * even from across the room: happy hops emphatically, sad sinks deep,
+ * angry shakes violently, terrified flickers hard, suspicious leans away,
+ * curious bobs while investigating.
+ */
+const MOTION_BY_EMOTION: Record<EmotionCategory, BitMotion> = {
+  happy: { shape: 'tetra', jitter: 0, bob: 0.45, bobHz: 4, sink: 0, lean: 0, flicker: 0 },
+  sad: { shape: 'disc', jitter: 0, bob: 0, bobHz: 0, sink: 0.55, lean: 0, flicker: 0 },
+  angry: { shape: 'octa', jitter: 0.2, bob: 0, bobHz: 0, sink: 0, lean: 0, flicker: 0 },
+  surprised: { shape: 'octa', jitter: 0, bob: 0.25, bobHz: 6, sink: 0, lean: 0, flicker: 0 },
+  terrified: { shape: 'octa', jitter: 0.28, bob: 0.15, bobHz: 8, sink: 0.2, lean: 0, flicker: 0.8 },
+  curious: { shape: 'octa', jitter: 0, bob: 0.2, bobHz: 2, sink: 0, lean: 0.25, flicker: 0 },
+  suspicious: { shape: 'octa', jitter: 0, bob: 0, bobHz: 0, sink: 0.15, lean: -0.6, flicker: 0 },
+  neutral: MOTION_NEUTRAL,
+}
+
+/** Emotion category → bit shape (the movie's yes/no morphs). */
+export function shapeForEmotion(emotion: EmotionCategory): BitShape {
+  return MOTION_BY_EMOTION[emotion].shape
+}
+
+/** Emotion category → motion signature. */
+export function motionForEmotion(emotion: EmotionCategory): BitMotion {
+  return MOTION_BY_EMOTION[emotion]
 }
 
 /** Fallback for unknown categories. */
@@ -85,6 +163,9 @@ function colorFromChannels(ax: AvatarExpression): THREE.Color {
 export function tronFromAvatarExpression(ax: AvatarExpression, emotion?: EmotionCategory): TronBitState {
   const peak = emotionalPeak(ax)
   const color = emotion ? colorForEmotion(emotion) : colorFromChannels(ax)
+  // Motion signature comes from the analysis category when known; the
+  // channel-argmax fallback (idle/listening) stays on the neutral signature.
+  const motion = emotion ? motionForEmotion(emotion) : MOTION_NEUTRAL
 
   return {
     color,
@@ -92,15 +173,17 @@ export function tronFromAvatarExpression(ax: AvatarExpression, emotion?: Emotion
     glow: 0.4 + peak * 1.6,
     // Slow idle spin; strong feelings spin faster. Anger gets jittery.
     spin: (0.6 + peak * 2.5) * (ax.angry > 0.3 ? 1.8 : 1),
-    // Same ±10° posture range as the VRM head tilt.
-    tilt: ax.headTilt * (10 * (Math.PI / 180)),
+    // Same posture range as the VRM head tilt, but wider (±15°) so the
+    // tilt reads on an abstract shape with no facial cues.
+    tilt: ax.headTilt * (15 * (Math.PI / 180)),
     // Gaze drifts the bit around its hover point.
-    driftX: ax.gazeX * 0.15,
-    driftY: ax.gazeY * 0.15,
+    driftX: ax.gazeX * 0.25,
+    driftY: ax.gazeY * 0.25,
     // Mouth open (incl. TTS lip-sync) → scale pulse.
     pulse: ax.mouthOpen,
     // Blink → vertical squash flicker.
     squash: ax.blink,
+    ...motion,
   }
 }
 

@@ -6,8 +6,7 @@
   import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
   import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
   import type { ReactionViewProps } from '../../types'
-  import { resolveTronState, type TronBitState } from './mapping'
-
+import { resolveTronState, type BitShape, type TronBitState } from './mapping'
   let {
     result = null,
     listening = false,
@@ -30,6 +29,13 @@
     driftY: 0,
     pulse: 0,
     squash: 0,
+    shape: 'octa',
+    jitter: 0,
+    bob: 0,
+    bobHz: 0,
+    sink: 0,
+    lean: 0,
+    flicker: 0,
   }
 
   onMount(() => {
@@ -60,9 +66,10 @@
     camera.position.set(0, 0, 7)
     camera.lookAt(0, 0, 0)
 
-    // The bit: a dark octahedron body with a bright edge wireframe. The
-    // edges carry the color and drive the bloom (toneMapped = false lets
-    // them exceed the bloom threshold).
+    // The bit: a dark body with a bright edge wireframe. The edges carry
+    // the color and drive the bloom (toneMapped = false lets them exceed
+    // the bloom threshold). Three geometries = the movie's yes/no morphs:
+    // octahedron (default), tetrahedron (YES), flattened octahedron (NO).
     const bit = new THREE.Group()
     const bodyGeometry = new THREE.OctahedronGeometry(0.9)
     const bodyMaterial = new THREE.MeshBasicMaterial({
@@ -81,6 +88,37 @@
     const edges = new THREE.LineSegments(edgeGeometry, edgeMaterial)
     bit.add(body, edges)
     scene.add(bit)
+
+    // Morph targets: tetra (YES) and disc (NO). The disc is the octa scaled
+    // flat on y; the tetra is a separate geometry. Both share the materials.
+    const tetraGeometry = new THREE.TetrahedronGeometry(1.05)
+    const tetraEdges = new THREE.EdgesGeometry(tetraGeometry)
+    const tetraBody = new THREE.Mesh(tetraGeometry, bodyMaterial)
+    const tetraWire = new THREE.LineSegments(tetraEdges, edgeMaterial)
+    const tetra = new THREE.Group()
+    tetra.add(tetraBody, tetraWire)
+    tetra.visible = false
+    scene.add(tetra)
+
+    const discBody = new THREE.Mesh(bodyGeometry, bodyMaterial)
+    const discWire = new THREE.LineSegments(edgeGeometry, edgeMaterial)
+    const disc = new THREE.Group()
+    disc.add(discBody, discWire)
+    disc.scale.set(1.25, 0.22, 1.25)
+    disc.visible = false
+    scene.add(disc)
+
+    // All three shapes, keyed for switching. The active one is visible and
+    // driven by the loop; the others hide. Base scales are per-shape (the
+    // disc is the octa flattened on y) — the loop multiplies them in, it
+    // must not overwrite them.
+    const shapes: Record<BitShape, THREE.Group> = { octa: bit, tetra, disc }
+    const shapeBaseScale: Record<BitShape, [number, number, number]> = {
+      octa: [1, 1, 1],
+      tetra: [1, 1, 1],
+      disc: [1.25, 0.22, 1.25],
+    }
+    let activeShape: BitShape = 'octa'
 
     // Neon glow: real bloom postprocessing (ships with three). Threshold
     // keeps the dark body from blooming; the small radius makes the glow
@@ -101,28 +139,58 @@
     const edgeColor = new THREE.Color()
     let rafId = 0
     let spinAngle = 0
+    let motionTime = 0
+    // Pop-on-change: a quick scale bump whenever the shape (and thus the
+    // emotion signature) changes, so transitions read at a glance.
+    let popT = 1 // 0..1, 1 = settled
     const animate = () => {
       rafId = requestAnimationFrame(animate)
       const delta = Math.min(clock.getDelta(), 0.1)
-      // Frame-rate independent smoothing toward the target state.
-      const k = 1 - Math.exp(-6 * delta)
+      motionTime += delta
+      // Frame-rate independent smoothing toward the target state (faster
+      // than before so emotion changes land with a snap).
+      const k = 1 - Math.exp(-9 * delta)
       // Edge brightness: ~1.2× color at idle, up to ~2.2× at emotional peak.
       // Values above 1 (toneMapped = false) are HDR → they exceed the bloom
-      // threshold and glow, while the dark body stays below it.
-      edgeColor.copy(target.color).multiplyScalar(0.8 + target.glow * 0.75)
+      // threshold and glow, while the dark body stays below it. Flicker
+      // (terrified) modulates the brightness with a fast double-sine wave.
+      const flickerMul =
+        1 - target.flicker * (0.5 + 0.5 * Math.sin(motionTime * 31)) * (0.5 + 0.5 * Math.sin(motionTime * 7.3))
+      edgeColor.copy(target.color).multiplyScalar((0.8 + target.glow * 0.75) * flickerMul)
       edgeMaterial.color.lerp(edgeColor, k)
 
-      spinAngle += target.spin * delta
-      bit.rotation.y = spinAngle
-      bit.rotation.z = THREE.MathUtils.lerp(bit.rotation.z, target.tilt, k)
-      bit.position.x = THREE.MathUtils.lerp(bit.position.x, target.driftX, k)
-      bit.position.y = THREE.MathUtils.lerp(bit.position.y, target.driftY, k)
+      // Shape switching with a pop: when the target shape differs, swap
+      // visibility and bump the pop timer.
+      if (target.shape !== activeShape) {
+        shapes[activeShape].visible = false
+        activeShape = target.shape
+        shapes[activeShape].visible = true
+        popT = 0
+      }
+      popT = Math.min(1, popT + delta * 3.5)
+      // Overshooting ease-out: 1 → 1.6 → 1 over ~0.3s.
+      const pop = 1 + 0.6 * Math.sin(Math.min(1, popT) * Math.PI)
 
-      // Scale: lip-sync pulse + blink squash (a bit doesn't blink — it
-      // flickers vertically).
-      const pulseScale = 1 + target.pulse * 0.18
-      const squashScale = 1 - target.squash * 0.4
-      bit.scale.set(pulseScale, pulseScale * squashScale, pulseScale)
+      // Motion engine: bob (excitement/YES hop), jitter (anger/panic),
+      // sink (sadness), plus the gaze drift and lip-sync pulse.
+      const bobY = target.bobHz > 0 ? Math.sin(motionTime * target.bobHz * Math.PI * 2) * target.bob : 0
+      const jitterX = target.jitter > 0 ? (Math.random() - 0.5) * 2 * target.jitter : 0
+      const jitterY = target.jitter > 0 ? (Math.random() - 0.5) * 2 * target.jitter : 0
+
+      const active = shapes[activeShape]
+      spinAngle += target.spin * delta
+      active.rotation.y = spinAngle
+      active.rotation.z = THREE.MathUtils.lerp(active.rotation.z, target.tilt, k)
+      active.rotation.x = THREE.MathUtils.lerp(active.rotation.x, target.lean, k)
+      active.position.x = THREE.MathUtils.lerp(active.position.x, target.driftX + jitterX, k)
+      active.position.y = THREE.MathUtils.lerp(active.position.y, target.driftY + bobY - target.sink + jitterY, k)
+
+      // Scale: per-shape base (disc is flattened) × pop bump × lip-sync
+      // pulse × blink squash (a bit doesn't blink — it flickers hard).
+      const [bx, by, bz] = shapeBaseScale[activeShape]
+      const pulseScale = pop * (1 + target.pulse * 0.3)
+      const squashScale = 1 - target.squash * 0.6
+      active.scale.set(pulseScale * bx, pulseScale * by * squashScale, pulseScale * bz)
 
       composer.render()
     }
@@ -131,8 +199,10 @@
     return () => {
       cancelAnimationFrame(rafId)
       observer.disconnect()
-      scene.remove(bit)
+      scene.remove(bit, tetra, disc)
       bodyGeometry.dispose()
+      tetraGeometry.dispose()
+      tetraEdges.dispose()
       bodyMaterial.dispose()
       edgeGeometry.dispose()
       edgeMaterial.dispose()

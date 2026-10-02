@@ -90,11 +90,13 @@
   // queueing — rapid-fire voice analyses would otherwise drain an endless
   // chain of near-identical holds, freezing the avatar in one emotion long
   // past the max hold time.
-  function receiveReaction(res: ReactionResult) {
+  // `immediate` bypasses the queue entirely for live signals (mic open, the
+  // user's own typed words): the latest input always shows at once.
+  function receiveReaction(res: ReactionResult, opts: { immediate?: boolean } = {}) {
     // While the user is still talking, reactions are live previews: the
     // latest analysis always wins, so the face keeps updating mid-speech
     // instead of stacking a queue that drains after the pause.
-    if (voice.micActive) {
+    if (voice.micActive || opts.immediate) {
       showReaction(res)
       return
     }
@@ -156,7 +158,10 @@
     error = ''
 
     try {
-      receiveReaction(await evaluateComplexReaction(input))
+      // The user's own words always react immediately (latest-wins, like
+      // the mid-speech mic preview) — queueing them behind a hold made
+      // typed input feel ignored whenever a previous reaction was held.
+      receiveReaction(await evaluateComplexReaction(input), { immediate: true })
     } catch (e) {
       error = e instanceof Error && e.message === 'MISSING_KEY'
         ? m.emotion_error_no_key()
@@ -178,7 +183,14 @@
     const input = text.trim()
     if (!input || sending) return
 
-    clearDebounce()
+    // Flush a pending debounce instead of cancelling it: Enter within 300ms
+    // of the last keystroke would otherwise skip the user's own emotion
+    // analysis entirely (only the reply would ever drive the avatar). The
+    // flushed analysis shows the user's emotion while Jev thinks.
+    if (debounceTimer !== undefined) {
+      clearDebounce()
+      void analyze()
+    }
     text = ''
     chatError = ''
     chatMessages = [...chatMessages, { role: 'user', content: input }]
